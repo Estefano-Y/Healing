@@ -17,6 +17,7 @@ import cl.tuusuario.healing.ui.screens.auth.RegisterScreen
 import cl.tuusuario.healing.ui.screens.auth.professional.PatientDetailScreen // <-- Pantalla NUEVA
 import cl.tuusuario.healing.ui.screens.auth.professional.ProfPatientsScreen  // <-- Pantalla que ya tenías
 import cl.tuusuario.healing.ui.screens.patient.*
+import cl.tuusuario.healing.ui.screens.patient.notes.NotesScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfAgendaScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.professional.RegisterAttentionScreen
@@ -77,7 +78,10 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
 
         // --- NAVEGACIÓN DEL PACIENTE (SIN CAMBIOS) ---
         composable(Routes.PATIENT_HOME, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { PatientHomeScreen(nav) }
-        composable(Routes.NOTES, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { NotesScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.NOTES, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) {
+            NotesScreen(
+                onBack = { nav.popBackStack() })
+        }
         composable(Routes.EMERGENCY, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { EmergencyContactScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.PERSONAL, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { PersonalDataScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.CALENDAR, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { CalendarScreen(onBack = { nav.popBackStack() }) }

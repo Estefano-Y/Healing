@@ -9,10 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.password
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+// ¡EL ÚNICO IMPORT DE VIEWMODEL QUE NECESITAS!
+import cl.tuusuario.healing.ui.screens.viewmodels.LoginViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,10 +24,9 @@ fun LoginScreen(
     onLoginAsProfessional: () -> Unit,
     onGoToRegister: () -> Unit
 ) {
-    // 1. Instanciamos el ViewModel
+    // Se instancia el ViewModel desde la carpeta correcta.
     val viewModel: LoginViewModel = viewModel()
 
-    // 2. Escuchamos los eventos de navegación del ViewModel
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->
             when (event) {
@@ -50,11 +52,11 @@ fun LoginScreen(
             Text("Bienvenido a Healing", style = MaterialTheme.typography.headlineLarge)
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- Campo Email ---
+            // --- CAMPO EMAIL ---
             OutlinedTextField(
                 value = viewModel.email,
                 onValueChange = { viewModel.onEmailChange(it) },
-                label = { Text("Email") },
+                label = { Text("Email") }, // La sintaxis simple es la correcta
                 isError = viewModel.emailError != null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -64,7 +66,7 @@ fun LoginScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- Campo Contraseña ---
+            // --- CAMPO CONTRASEÑA ---
             OutlinedTextField(
                 value = viewModel.password,
                 onValueChange = { viewModel.onPasswordChange(it) },

@@ -1,5 +1,14 @@
 package cl.tuusuario.healing.ui.screens.auth
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.semantics.password
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,13 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+// ¡EL ÚNICO IMPORT DE VIEWMODEL QUE NECESITAS!
+import cl.tuusuario.healing.ui.screens.viewmodels.RegisterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateBack: () -> Unit // Parámetro para manejar la navegación hacia atrás
 ) {
-    // 1. Instanciamos el ViewModel
+    // 1. Instanciamos el ViewModel desde la carpeta correcta.
     val viewModel: RegisterViewModel = viewModel()
 
     // 2. Escuchamos eventos de navegación del ViewModel
@@ -31,7 +42,6 @@ fun RegisterScreen(
         }
     }
 
-    // Usamos Surface para el fondo
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -40,7 +50,7 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // Para que sea scrollable
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -108,7 +118,7 @@ fun RegisterScreen(
             // --- Botón de Registro ---
             Button(
                 onClick = { viewModel.onRegisterClick() },
-                enabled = viewModel.isFormValid, // El botón se activa solo si el formulario es válido
+                enabled = viewModel.isFormValid,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Registrarse")

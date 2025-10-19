@@ -1,12 +1,18 @@
 package cl.tuusuario.healing.ui.screens.patient
+
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons // <-- Import principal de Icons
-import androidx.compose.material.icons.filled.* // <-- Import para los iconos específicos
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,26 +21,52 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.tuusuario.healing.data.local.AppDatabase
+import cl.tuusuario.healing.data.local.repository.PatientDataRepository
+import cl.tuusuario.healing.ui.screens.viewmodels.EmergencyContactViewModel
+import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmergencyContactScreen(
     onBack: () -> Unit
 ) {
-    // --- Estados para el contacto y el modo edición ---
-    var isInEditMode by remember { mutableStateOf(false) }
-
-    // Datos de ejemplo. En una app real, vendrían de un ViewModel/base de datos.
-    var contactName by remember { mutableStateOf("Ana González") }
-    var relationship by remember { mutableStateOf("Madre") }
-    var phoneNumber by remember { mutableStateOf("+56912345678") }
-
-    // El contexto es necesario para lanzar intents (llamadas, mensajes)
+    // --- 1. CONEXIÓN A LA ARQUITECTURA DE DATOS ---
     val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val repository = remember {
+        PatientDataRepository(
+            noteDao = db.noteDao(),
+            personalDataDao = db.personalDataDao(),
+            emergencyContactDao = db.emergencyContactDao(),
+            medsReminderDao = db.medsReminderDao()
+        )
+    }
+    val viewModel: EmergencyContactViewModel = viewModel(factory = ViewModelFactory(repository))
+    val contactFromDb by viewModel.emergencyContactState.collectAsState()
+    val mainContact = contactFromDb
+
+    // --- 2. ESTADOS LOCALES PARA LA UI ---
+    var isInEditMode by remember { mutableStateOf(false) }
+    var contactName by remember { mutableStateOf("") }
+    var relationship by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+
+    // --- 3. EFECTO PARA SINCRONIZAR LA UI CON LA BASE DE DATOS ---
+    LaunchedEffect(mainContact) {
+        if (mainContact != null) {
+            contactName = mainContact.name
+            relationship = mainContact.relationship
+            phoneNumber = mainContact.phone
+        } else {
+            isInEditMode = true
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -48,7 +80,15 @@ fun EmergencyContactScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { isInEditMode = !isInEditMode }) {
+            FloatingActionButton(onClick = {
+                if (isInEditMode) {
+                    viewModel.saveEmergencyContact(contactName, relationship, phoneNumber)
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Contacto guardado")
+                    }
+                }
+                isInEditMode = !isInEditMode
+            }) {
                 Crossfade(targetState = isInEditMode, label = "fab_icon") { isEditing ->
                     if (isEditing) {
                         Icon(Icons.Default.Done, contentDescription = "Guardar Contacto")
@@ -57,32 +97,32 @@ fun EmergencyContactScreen(
                     }
                 }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Usamos AnimatedVisibility para mostrar la tarjeta o el formulario de edición
-            AnimatedVisibility(visible = !isInEditMode) {
+            AnimatedVisibility(visible = !isInEditMode && mainContact != null) {
                 ViewContactCard(
-                    name = contactName,
-                    relationship = relationship,
-                    phone = phoneNumber,
+                    name = mainContact?.name ?: "",
+                    relationship = mainContact?.relationship ?: "",
+                    phone = mainContact?.phone ?: "",
                     onCall = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${mainContact?.phone}"))
                         context.startActivity(intent)
                     },
                     onMessage = {
-                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phoneNumber"))
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${mainContact?.phone}"))
                         context.startActivity(intent)
                     }
                 )
             }
-
             AnimatedVisibility(visible = isInEditMode) {
                 EditContactForm(
                     name = contactName,
@@ -93,11 +133,17 @@ fun EmergencyContactScreen(
                     onPhoneChange = { phoneNumber = it }
                 )
             }
+            if (!isInEditMode && mainContact == null) {
+                Text("No hay un contacto de emergencia guardado. Presiona el botón de editar para añadir uno.")
+            }
         }
     }
 }
 
-// Tarjeta que muestra el contacto y los botones de acción
+// --- ¡¡¡CORRECCIÓN!!! ---
+// AHORA ESTAS FUNCIONES ESTÁN AL NIVEL SUPERIOR DEL ARCHIVO,
+// POR LO QUE SON VISIBLES DESDE CUALQUIER OTRA FUNCIÓN EN ESTE MISMO ARCHIVO.
+
 @Composable
 private fun ViewContactCard(
     name: String,
@@ -159,7 +205,6 @@ private fun ViewContactCard(
     }
 }
 
-// Formulario para editar la información del contacto
 @Composable
 private fun EditContactForm(
     name: String,
@@ -194,11 +239,10 @@ private fun EditContactForm(
     }
 }
 
-// Botón de acción reutilizable para "Llamar" y "Mensaje"
 @Composable
 private fun ActionButton(
     text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
