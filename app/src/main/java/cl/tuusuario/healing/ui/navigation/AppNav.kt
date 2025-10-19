@@ -5,13 +5,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cl.tuusuario.healing.ui.screens.auth.LoginScreen
-import cl.tuusuario.healing.ui.screens.auth.RegisterScreen
+import cl.tuusuario.healing.ui.screens.auth.RegisterScreen // Asegúrate que la importación esté
 import cl.tuusuario.healing.ui.screens.patient.*
 import cl.tuusuario.healing.ui.screens.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfAgendaScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfPatientsScreen
 import cl.tuusuario.healing.ui.screens.professional.RegisterAttentionScreen
-
 
 object Routes {
     const val LOGIN = "login"
@@ -43,7 +42,11 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
                 onGoToRegister = { nav.navigate(Routes.REGISTER) }
             )
         }
-        composable(Routes.REGISTER) { RegisterScreen(onRegistered = { nav.popBackStack() }) }
+
+        // --- LÍNEA CORREGIDA ---
+        composable(Routes.REGISTER) {
+            RegisterScreen(onNavigateBack = { nav.popBackStack() })
+        }
 
         // Paciente
         composable(Routes.PATIENT_HOME) { PatientHomeScreen(nav) }
