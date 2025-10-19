@@ -1,8 +1,5 @@
 package cl.tuusuario.healing.ui.screens.patient
 
-// 1. Imports adicionales para la animación
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -10,187 +7,169 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
+import androidx.navigation.NavController
 import cl.tuusuario.healing.ui.navigation.Routes
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-// 2. Anotación necesaria para animateItemPlacement
-@OptIn(ExperimentalFoundationApi::class)
+// Modelo para los items de acción en la cuadrícula
+private data class ActionItem(
+    val title: String,
+    val icon: ImageVector,
+    val route: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientHomeScreen(nav: NavHostController) {
-    val bg = Color(0xFFAED9C5)
-    val pill = Color(0xFF6A5FA0)
-    val pillLight = Color(0xFF9A92C9)
-    var progress by remember { mutableFloatStateOf(0.75f) }
+fun PatientHomeScreen(nav: NavController) {
 
-    Surface(color = bg, modifier = Modifier.fillMaxSize()) {
+    // --- Datos de ejemplo que vendrían de un ViewModel ---
+    val patientName = "Juan" // Nombre del paciente
+    val nextTask = "Tomar Paracetamol - 10:00 AM"
+    val dayFormatter = remember {
+        DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("es", "ES"))
+    }
+    val today = LocalDate.now().format(dayFormatter).replaceFirstChar { it.uppercase() }
+
+    // Lista de acciones que el paciente puede realizar
+    val actions = remember {
+        listOf(
+            ActionItem("Mi Agenda", Icons.Filled.CalendarMonth, Routes.CALENDAR),
+            ActionItem("Mis Medicamentos", Icons.Filled.Medication, Routes.MEDS),
+            ActionItem("Contacto de Emergencia", Icons.Filled.Emergency, Routes.EMERGENCY),
+            ActionItem("Mis Datos", Icons.Filled.AccountCircle, Routes.PERSONAL),
+            ActionItem("Mis Notas", Icons.Filled.Notes, Routes.NOTES),
+            // Puedes añadir más acciones aquí
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Mi Bienestar") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Mi Agenda", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("14:20 p. m.", fontSize = 12.sp)
-                    Text("Jueves 25 de sept", fontSize = 12.sp)
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Progreso del día", fontSize = 14.sp)
-                Text("${(progress * 100).toInt()}%", fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp)
-                    .background(pillLight, RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .padding(horizontal = 10.dp),
-                    color = pill,
-                    trackColor = Color.Transparent
+            // --- 1. Saludo y Fecha ---
+            Column {
+                Text(
+                    text = "Hola, $patientName",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = today,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(Modifier.height(22.dp))
-            Text("Tracker de hábitos", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(12.dp))
-
-            val habits = listOf(
-                HabitUi("Agua", Icons.Filled.LocalDrink),
-                HabitUi("Trotar", Icons.Filled.DirectionsRun),
-                HabitUi("Leer", Icons.Filled.MenuBook),
-                HabitUi("Comer Sano", Icons.Filled.Restaurant),
-                HabitUi("Ejercicios", Icons.Filled.FitnessCenter),
-                HabitUi("Pasear\nmascota", Icons.Filled.Pets),
-            )
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 180.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                userScrollEnabled = false
+            // --- 2. Tarjeta de Próxima Tarea ---
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                items(habits) { h ->
-                    HabitItem(
-                        habit = h,
-                        pill = pill,
-                        pillLight = pillLight,
-                        // 3. Pasamos el modifier con la animación al item
-                        modifier = Modifier.animateItemPlacement(),
-                        onClick = {
-                            progress = (progress + 0.05f).coerceAtMost(1f)
-                        }
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = "Próxima tarea",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
                     )
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Siguiente tarea de hoy:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = nextTask,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(22.dp))
-            Text("Herramientas", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(10.dp))
-
-            val tools = listOf(
-                "Notas" to Routes.NOTES,
-                "Horario\nmedicamentos" to Routes.MEDS,
-                "Contacto de\nemergencia" to Routes.EMERGENCY,
-                "Datos\npersonales" to Routes.PERSONAL,
-                "Calendario" to Routes.CALENDAR,
-                "Plan de\nalimentación" to Routes.CALENDAR // placeholder
+            // --- 3. Cuadrícula de Acciones ---
+            Text(
+                "Tus Herramientas",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
             )
 
+            // Usamos LazyVerticalGrid para crear una cuadrícula de 2 columnas
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                userScrollEnabled = false
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(tools) { (label, route) ->
-                    PillButton(
-                        text = label,
-                        color = pill,
-                        // 3. Pasamos el modifier con la animación al botón
-                        modifier = Modifier.animateItemPlacement(),
-                        onClick = { nav.navigate(route) }
+                items(actions) { action ->
+                    ActionCard(
+                        title = action.title,
+                        icon = action.icon,
+                        onClick = { nav.navigate(action.route) }
                     )
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-private data class HabitUi(val label: String, val icon: ImageVector)
 
+// Componente para las tarjetas de acción en la cuadrícula
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HabitItem(
-    habit: HabitUi,
-    pill: Color,
-    pillLight: Color,
-    modifier: Modifier = Modifier, // 4. Aceptamos el modifier como parámetro
-    onClick: () -> Unit
-) {
-    // 5. Usamos el modifier en el elemento raíz del item (la Column)
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        Surface(color = pillLight, shape = RoundedCornerShape(100), modifier = Modifier.size(74.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                IconButton(onClick = onClick) { Icon(habit.icon, contentDescription = habit.label, tint = Color.White) }
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(habit.label, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 14.sp)
-    }
-}
-
-@Composable
-private fun PillButton(
-    text: String,
-    color: Color,
-    modifier: Modifier = Modifier, // 4. Aceptamos el modifier como parámetro
-    onClick: () -> Unit
-) {
-    Button(
+private fun ActionCard(title: String, icon: ImageVector, onClick: () -> Unit) {
+    Card(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
-        colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.White),
-        // 5. Usamos el modifier en el elemento raíz del item (el Button)
-        modifier = modifier
-            .fillMaxWidth()
-            .height(42.dp),
-        contentPadding = PaddingValues(horizontal = 14.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+        modifier = Modifier
+            .aspectRatio(1f), // Hace que la tarjeta sea cuadrada
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        )
     ) {
-        Text(text, textAlign = TextAlign.Center, fontSize = 13.sp, lineHeight = 15.sp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

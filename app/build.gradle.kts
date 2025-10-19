@@ -20,6 +20,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // 1. HABILITA EL CORE LIBRARY DESUGARING
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlin {
@@ -54,6 +56,9 @@ dependencies {
     implementation(libs.androidx.compose.material.icons)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    // Librería para un calendario de Compose altamente personalizable
+    implementation("com.kizitonwose.calendar:compose:2.5.1")
+
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
@@ -62,6 +67,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // 2. AÑADE LA DEPENDENCIA PARA EL DESUGARING
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
     // Dependencias de Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -69,4 +77,3 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
-
