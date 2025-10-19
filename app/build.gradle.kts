@@ -43,6 +43,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+    // Animaciones para la Navegación
+    implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
+
     // Dependencias de Compose UI
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

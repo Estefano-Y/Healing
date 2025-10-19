@@ -1,11 +1,19 @@
 // El 'package' es correcto gracias al movimiento de la carpeta
 package cl.tuusuario.healing.ui.screens.patient
 
+// Imports adicionales para las animaciones
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi // <-- Necesario para animateItemPlacement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items // <-- Import correcto para LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack // <-- Import para el botón de atrás
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +32,8 @@ import cl.tuusuario.healing.ui.screens.patient.notes.NotesViewModel
 import cl.tuusuario.healing.ui.screens.patient.notes.NotesViewModelFactory
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+// OptIn para ExperimentalFoundationApi
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NotesScreen(
     onBack: () -> Unit
@@ -39,10 +48,27 @@ fun NotesScreen(
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mis Notas Persistentes") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Mis Notas Persistentes") },
+                // Añadimos un botón de navegación para volver atrás
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddNoteDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir Nota")
+            // --- Animación 3: AnimatedVisibility para el FAB ---
+            AnimatedVisibility(
+                visible = true, // Puedes cambiar esto por un estado si quieres que se oculte al hacer scroll
+                enter = scaleIn(),
+                exit = scaleOut()
+            ) {
+                FloatingActionButton(onClick = { showAddNoteDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Añadir Nota")
+                }
             }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -58,7 +84,6 @@ fun NotesScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // --- SINTAXIS DE ITEMS CORREGIDA ---
                     items(
                         items = uiState.notes,
                         key = { note -> note.id } // La key sigue siendo el id
@@ -76,8 +101,17 @@ fun NotesScreen(
                                     if (result == SnackbarResult.ActionPerformed) {
                                         viewModel.undoDelete()
                                     }
+
                                 }
-                            }
+                            },
+                            // --- Animación 2: Reordenamiento de Listas ---
+                            // Pasamos el modifier al item para animar su posición
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
                         )
                     }
                 }
@@ -96,10 +130,14 @@ fun NotesScreen(
     }
 }
 
-// El parámetro ahora es de tipo 'Note', que es la clase correcta
+// Se añade el parámetro 'modifier' a NoteItem
 @Composable
-fun NoteItem(note: Note, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+fun NoteItem(note: Note, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+    Card(
+        // Se usa el modifier en el Card
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -138,4 +176,3 @@ private fun AddNoteDialog(onDismiss: () -> Unit, onConfirm: (title: String, cont
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
-

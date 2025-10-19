@@ -1,35 +1,38 @@
 package cl.tuusuario.healing.ui.screens.patient
 
+// 1. Imports adicionales para la animación
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.navigation.NavHostController
 import cl.tuusuario.healing.ui.navigation.Routes
 
+// 2. Anotación necesaria para animateItemPlacement
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PatientHomeScreen(nav: NavHostController) {
     val bg = Color(0xFFAED9C5)
     val pill = Color(0xFF6A5FA0)
     val pillLight = Color(0xFF9A92C9)
-    var progress by remember { mutableStateOf(0.75f) }
+    var progress by remember { mutableFloatStateOf(0.75f) }
 
     Surface(color = bg, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -96,9 +99,16 @@ fun PatientHomeScreen(nav: NavHostController) {
                 userScrollEnabled = false
             ) {
                 items(habits) { h ->
-                    HabitItem(h, pill, pillLight) {
-                        progress = (progress + 0.05f).coerceAtMost(1f)
-                    }
+                    HabitItem(
+                        habit = h,
+                        pill = pill,
+                        pillLight = pillLight,
+                        // 3. Pasamos el modifier con la animación al item
+                        modifier = Modifier.animateItemPlacement(),
+                        onClick = {
+                            progress = (progress + 0.05f).coerceAtMost(1f)
+                        }
+                    )
                 }
             }
 
@@ -123,7 +133,13 @@ fun PatientHomeScreen(nav: NavHostController) {
                 userScrollEnabled = false
             ) {
                 items(tools) { (label, route) ->
-                    PillButton(text = label, color = pill) { nav.navigate(route) }
+                    PillButton(
+                        text = label,
+                        color = pill,
+                        // 3. Pasamos el modifier con la animación al botón
+                        modifier = Modifier.animateItemPlacement(),
+                        onClick = { nav.navigate(route) }
+                    )
                 }
             }
 
@@ -132,16 +148,21 @@ fun PatientHomeScreen(nav: NavHostController) {
     }
 }
 
-private data class HabitUi(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private data class HabitUi(val label: String, val icon: ImageVector)
 
 @Composable
 private fun HabitItem(
     habit: HabitUi,
     pill: Color,
     pillLight: Color,
+    modifier: Modifier = Modifier, // 4. Aceptamos el modifier como parámetro
     onClick: () -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    // 5. Usamos el modifier en el elemento raíz del item (la Column)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
         Surface(color = pillLight, shape = RoundedCornerShape(100), modifier = Modifier.size(74.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 IconButton(onClick = onClick) { Icon(habit.icon, contentDescription = habit.label, tint = Color.White) }
@@ -153,12 +174,20 @@ private fun HabitItem(
 }
 
 @Composable
-private fun PillButton(text: String, color: Color, onClick: () -> Unit) {
+private fun PillButton(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier, // 4. Aceptamos el modifier como parámetro
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.White),
-        modifier = Modifier.fillMaxWidth().height(42.dp),
+        // 5. Usamos el modifier en el elemento raíz del item (el Button)
+        modifier = modifier
+            .fillMaxWidth()
+            .height(42.dp),
         contentPadding = PaddingValues(horizontal = 14.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
