@@ -4,62 +4,60 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-// --- ¡CAMBIOS CLAVE EN LOS IMPORTS! ---
-// Se reemplazan los imports de navegación estándar por los de Accompanist
-import com.google.accompanist.navigation.animation.AnimatedNavHost
-import com.google.accompanist.navigation.animation.composable
-import com.google.accompanist.navigation.animation.rememberAnimatedNavController
-// ---
 import cl.tuusuario.healing.ui.screens.auth.LoginScreen
 import cl.tuusuario.healing.ui.screens.auth.RegisterScreen
-// --- ¡NUEVOS IMPORTS PARA LAS PANTALLAS DEL PROFESIONAL! ---
-import cl.tuusuario.healing.ui.screens.auth.professional.PatientDetailScreen // <-- Pantalla NUEVA
-import cl.tuusuario.healing.ui.screens.auth.professional.ProfPatientsScreen  // <-- Pantalla que ya tenías
+import cl.tuusuario.healing.ui.screens.auth.professional.PatientDetailScreen
+import cl.tuusuario.healing.ui.screens.auth.professional.ProfPatientsScreen
 import cl.tuusuario.healing.ui.screens.patient.*
 import cl.tuusuario.healing.ui.screens.patient.notes.NotesScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfAgendaScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.professional.RegisterAttentionScreen
 
-// Tu objeto Routes no necesita cambios
+
+// El objeto Routes no necesita cambios.
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val PATIENT_HOME = "patient_home"
     const val PROFESSIONAL_HOME = "professional_home"
-
-    // Herramientas Paciente
     const val NOTES = "notes"
     const val EMERGENCY = "emergency"
     const val PERSONAL = "personal"
     const val CALENDAR = "calendar"
     const val MEDS = "meds"
-
-    // ---- Profesional ----
     const val PROF_AGENDA = "prof_agenda"
     const val PROF_PATIENTS = "prof_patients"
     const val PROF_REGISTER = "prof_register"
-    // --- ¡NUEVA RUTA AÑADIDA! ---
+    private const val PATIENT_DETAIL_ARG = "patientId"
     const val PATIENT_DETAIL = "patient_detail"
+    const val PATIENT_DETAIL_ROUTE = "$PATIENT_DETAIL/{$PATIENT_DETAIL_ARG}"
+    fun patientDetailRoute(patientId: String) = "$PATIENT_DETAIL/$patientId"
 }
 
-// Anotación necesaria para las APIs de animación experimentales
-@OptIn(ExperimentalAnimationApi::class)
+
 @Composable
 fun AppNav(startDestination: String = Routes.LOGIN) {
-    // 1. Usamos el NavController que soporta animaciones
-    val nav = rememberAnimatedNavController()
+    val nav = rememberNavController()
 
-    // 2. Definimos las 4 animaciones de deslizamiento que reutilizaremos
+    // Las animaciones están perfectas.
     val slideIn = slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(350))
     val slideOut = slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(350))
     val popSlideIn = slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(350))
     val popSlideOut = slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(350))
 
-
-    // 3. Usamos AnimatedNavHost en lugar del NavHost estándar
-    AnimatedNavHost(navController = nav, startDestination = startDestination) {
+    NavHost(
+        navController = nav,
+        startDestination = startDestination,
+        enterTransition = { slideIn },
+        exitTransition = { slideOut },
+        popEnterTransition = { popSlideIn },
+        popExitTransition = { popSlideOut }
+    ) {
 
         composable(
             Routes.LOGIN,
@@ -72,50 +70,40 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
             )
         }
 
-        composable(Routes.REGISTER, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) {
+        composable(Routes.REGISTER) {
             RegisterScreen(onNavigateBack = { nav.popBackStack() })
         }
 
-        // --- NAVEGACIÓN DEL PACIENTE (SIN CAMBIOS) ---
-        composable(Routes.PATIENT_HOME, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { PatientHomeScreen(nav) }
-        composable(Routes.NOTES, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) {
-            NotesScreen(
-                onBack = { nav.popBackStack() })
-        }
-        composable(Routes.EMERGENCY, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { EmergencyContactScreen(onBack = { nav.popBackStack() }) }
-        composable(Routes.PERSONAL, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { PersonalDataScreen(onBack = { nav.popBackStack() }) }
-        composable(Routes.CALENDAR, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { CalendarScreen(onBack = { nav.popBackStack() }) }
-        composable(Routes.MEDS, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { MedsReminderScreen(onBack = { nav.popBackStack() }) }
+        // --- NAVEGACIÓN DEL PACIENTE ---
+        composable(Routes.PATIENT_HOME) { PatientHomeScreen(nav) }
+        composable(Routes.NOTES) { NotesScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.EMERGENCY) { EmergencyContactScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.PERSONAL) { PersonalDataScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.CALENDAR) { CalendarScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.MEDS) { MedsReminderScreen(onBack = { nav.popBackStack() }) }
 
-        // --- NAVEGACIÓN DEL PROFESIONAL (CON CAMBIOS) ---
-        composable(Routes.PROFESSIONAL_HOME, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { ProfessionalHomeScreen(nav) }
-        composable(Routes.PROF_AGENDA, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { ProfAgendaScreen(onBack = { nav.popBackStack() }) }
+        // --- NAVEGACIÓN DEL PROFESIONAL ---
+        composable(Routes.PROFESSIONAL_HOME) { ProfessionalHomeScreen(nav) }
+        composable(Routes.PROF_AGENDA) { ProfAgendaScreen(onBack = { nav.popBackStack() }) }
 
-        // --- ¡CAMBIO AQUÍ! Se completa la llamada a ProfPatientsScreen ---
-        composable(
-            Routes.PROF_PATIENTS,
-            enterTransition = { slideIn }, exitTransition = { slideOut },
-            popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }
-        ) {
+        // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
+        composable(Routes.PROF_PATIENTS) {
             ProfPatientsScreen(
-                // Se añade la acción de navegar al detalle del paciente
                 onPatientClick = { patientId ->
-                    nav.navigate("${Routes.PATIENT_DETAIL}/$patientId")
+                    nav.navigate(Routes.patientDetailRoute(patientId))
                 },
-                onAddPatientClick = { /* Lógica para añadir paciente, por ahora vacía */ },
+                // El parámetro onAddPatientClick ya no se pasa,
+                // porque la lógica del diálogo ahora está dentro de la pantalla.
                 onBack = { nav.popBackStack() }
             )
         }
+        // --- FIN DE LA CORRECCIÓN ---
 
-        composable(Routes.PROF_REGISTER, enterTransition = { slideIn }, exitTransition = { slideOut }, popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }) { RegisterAttentionScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.PROF_REGISTER) { RegisterAttentionScreen(onBack = { nav.popBackStack() }) }
 
-
-        // --- ¡NUEVA PANTALLA AÑADIDA! ---
         composable(
-            route = "${Routes.PATIENT_DETAIL}/{patientId}", // La ruta acepta un argumento
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
-            enterTransition = { slideIn }, exitTransition = { slideOut },
-            popEnterTransition = { popSlideIn }, popExitTransition = { popSlideOut }
+            route = Routes.PATIENT_DETAIL_ROUTE,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getString("patientId") ?: ""
             PatientDetailScreen(

@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,22 +33,23 @@ fun NotesScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
+    val db = remember { AppDatabase.getDatabase(context) }
+
+    // --- ¡¡¡CORRECCIÓN FINAL AQUÍ!!! ---
     val repository = remember {
         PatientDataRepository(
             noteDao = db.noteDao(),
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
-            medsReminderDao = db.medsReminderDao()
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao() // <-- Se añade el DAO que faltaba
         )
     }
-    // Con la ViewModelFactory y el ViewModel correctos, esto funciona.
-    val viewModel: NotesViewModel = viewModel(factory = ViewModelFactory(repository))
+    // --- FIN DE LA CORRECIÓN ---
 
-    // La línea del error ahora encontrará `notesState` en el `viewModel` correctamente importado.
+    val viewModel: NotesViewModel = viewModel(factory = ViewModelFactory(repository))
     val notesState by viewModel.notesState.collectAsState()
 
-    // ... (El resto del archivo es idéntico y correcto)
     var showAddNoteDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -120,7 +120,7 @@ fun NotesScreen(
     }
 }
 
-// ... (NoteItem y AddNoteDialog se quedan igual)
+// El resto de tus Composables están perfectos y no necesitan cambios.
 @Composable
 fun NoteItem(note: Note, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     Card(
@@ -164,3 +164,4 @@ private fun AddNoteDialog(onDismiss: () -> Unit, onConfirm: (title: String, cont
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
+

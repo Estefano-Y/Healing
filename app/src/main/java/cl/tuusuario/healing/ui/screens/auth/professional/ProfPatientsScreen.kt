@@ -1,14 +1,12 @@
-// La ruta de tu paquete podría ser diferente, asegúrate de que coincida
 package cl.tuusuario.healing.ui.screens.auth.professional
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -18,63 +16,64 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import cl.tuusuario.healing.R // Asegúrate que este import sea correcto
-
-// --- Modelo de Datos para esta pantalla ---
-private enum class PatientStatus(val color: Color, val icon: ImageVector) {
-    CRITICAL(Color(0xFFE57373), Icons.Default.Warning),
-    ATTENTION(Color(0xFFFFA726), Icons.Default.ChatBubble),
-    OK(Color.Transparent, Icons.Default.CheckCircle)
-}
-
-private data class PatientSummary(
-    val id: String,
-    val name: String,
-    val profilePicRes: Int,
-    val status: PatientStatus,
-    val lastActivity: String
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.tuusuario.healing.data.local.AppDatabase
+import cl.tuusuario.healing.data.local.PatientEntity
+import cl.tuusuario.healing.data.local.repository.PatientDataRepository
+import cl.tuusuario.healing.ui.screens.viewmodels.ProfPatientsViewModel
+import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfPatientsScreen(
-    // --- ¡CAMBIOS AQUÍ! AÑADIMOS LOS NUEVOS PARÁMETROS ---
     onPatientClick: (patientId: String) -> Unit,
-    onAddPatientClick: () -> Unit,
+    // El parámetro onAddPatientClick ya no es necesario, lo manejamos internamente.
+    // onAddPatientClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    // --- Datos de ejemplo. Vendrían de un ViewModel ---
-    val allPatients = remember {
-        listOf(
-            PatientSummary("1", "Juan Pérez González", R.drawable.ic_launcher_background, PatientStatus.CRITICAL, "No ha registrado medicamentos hoy"),
-            PatientSummary("2", "Ana María López", R.drawable.ic_launcher_background, PatientStatus.ATTENTION, "Nuevo mensaje hace 1 hora"),
-            PatientSummary("3", "Carlos Soto Martínez", R.drawable.ic_launcher_background, PatientStatus.OK, "Próxima cita: Mañana, 10:00"),
-            PatientSummary("4", "Luisa Fernández Díaz", R.drawable.ic_launcher_background, PatientStatus.OK, "Última actividad: Ayer"),
-            PatientSummary("5", "Pedro Morales Castro", R.drawable.ic_launcher_background, PatientStatus.ATTENTION, "Resultados de análisis disponibles"),
+    // --- CONEXIÓN Y ESTADOS (SIN CAMBIOS) ---
+    val context = LocalContext.current
+    val repository = remember {
+        val db = AppDatabase.getDatabase(context)
+        PatientDataRepository(
+            noteDao = db.noteDao(),
+            personalDataDao = db.personalDataDao(),
+            emergencyContactDao = db.emergencyContactDao(),
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao()
         )
     }
-
+    val viewModel: ProfPatientsViewModel = viewModel(factory = ViewModelFactory(repository))
+    val allPatients by viewModel.patientsState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     val filteredPatients = remember(searchQuery, allPatients) {
-        if (searchQuery.isBlank()) {
-            allPatients
-        } else {
-            allPatients.filter { it.name.contains(searchQuery, ignoreCase = true) }
-        }
+        if (searchQuery.isBlank()) allPatients
+        else allPatients.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    // --- ESTADO PARA CONTROLAR EL DIÁLOGO ---
+    var showAddPatientDialog by remember { mutableStateOf(false) }
+
+    if (showAddPatientDialog) {
+        AddPatientDialog(
+            onDismiss = { showAddPatientDialog = false },
+            onConfirm = { name, age, diagnosis ->
+                viewModel.addPatient(name, age, diagnosis)
+                showAddPatientDialog = false // Cierra el diálogo al confirmar
+            }
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Mis Pacientes") },
-                // ¡CAMBIO! Añadimos el botón de "atrás" que recibe por parámetro
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -83,10 +82,7 @@ fun ProfPatientsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                // --- ¡CAMBIO AQUÍ! ---
-                onClick = onAddPatientClick // Usamos la nueva función
-            ) {
+            FloatingActionButton(onClick = { showAddPatientDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir Paciente")
             }
         }
@@ -96,7 +92,7 @@ fun ProfPatientsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // --- Barra de Búsqueda ---
+            // Barra de búsqueda (sin cambios)
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -114,30 +110,35 @@ fun ProfPatientsScreen(
                     .padding(16.dp)
             )
 
-            // --- Lista de Pacientes ---
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredPatients, key = { it.id }) { patient ->
-                    PatientCard(
-                        patient = patient,
-                        // --- ¡CAMBIO AQUÍ! ---
-                        onClick = { onPatientClick(patient.id) } // Usamos la nueva función
-                    )
+            // Indicador de carga y lista (sin cambios)
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredPatients, key = { it.id }) { patient ->
+                        PatientCard(
+                            patient = patient,
+                            onClick = { onPatientClick(patient.id) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// --- La tarjeta de resumen por paciente ---
+// Tarjeta del paciente (sin cambios)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PatientCard(
-    patient: PatientSummary,
-    onClick: () -> Unit
-) {
+private fun PatientCard(patient: PatientEntity, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -147,17 +148,21 @@ private fun PatientCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = patient.profilePicRes),
-                contentDescription = "Foto de ${patient.name}",
-                contentScale = ContentScale.Crop,
+            Box(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-            )
-
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = patient.name.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Medium
+                )
+            }
             Spacer(Modifier.width(16.dp))
-
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
@@ -178,25 +183,82 @@ private fun PatientCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-
-            Spacer(Modifier.width(12.dp))
-
-            AnimatedVisibility(visible = patient.status != PatientStatus.OK) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(patient.status.color.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = patient.status.icon,
-                        contentDescription = "Estado",
-                        tint = patient.status.color,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            if (patient.hasCriticalAlert) {
+                Spacer(Modifier.width(12.dp))
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Alerta Crítica",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
     }
+}
+
+
+// --- ¡NUEVO COMPOSABLE PARA EL DIÁLOGO DE AÑADIR PACIENTE! ---
+@Composable
+private fun AddPatientDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, age: Int, diagnosis: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var diagnosis by remember { mutableStateOf("") }
+
+    // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
+    // Se usa 'derivedStateOf' para crear un estado computado a partir de otros.
+    val isFormValid by remember {
+        derivedStateOf {
+            name.isNotBlank() && diagnosis.isNotBlank() && age.toIntOrNull() != null
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir Nuevo Paciente") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre completo") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = age,
+                    onValueChange = { age = it },
+                    label = { Text("Edad") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = diagnosis,
+                    onValueChange = { diagnosis = it },
+                    label = { Text("Diagnóstico Principal") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // Nos aseguramos de que no se pueda clickear si no es válido,
+                    // pero en caso de que ocurra, onConfirm no se llama.
+                    if (isFormValid) {
+                        onConfirm(name, age.toInt(), diagnosis)
+                    }
+                },
+                enabled = isFormValid // El botón se activa solo si el formulario es válido
+            ) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

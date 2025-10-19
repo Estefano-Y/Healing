@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
+// ... (Todas tus entidades y DAOs están perfectos, no necesitan cambios)
 //============================================
 // 1. ENTIDADES (Las Tablas de la Base de Datos)
 //============================================
@@ -18,7 +19,7 @@ data class Note(
 
 @Entity(tableName = "personal_data")
 data class PersonalDataEntity(
-    @PrimaryKey val id: Int = 1, // Usamos un ID fijo para que siempre sea el mismo registro
+    @PrimaryKey val id: Int = 1,
     val name: String,
     val birthDate: String,
     val bloodType: String,
@@ -42,6 +43,25 @@ data class MedsReminderEntity(
     val time: String,
     val isTaken: Boolean = false
 )
+
+@Entity(tableName = "professionals")
+data class ProfessionalEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val specialty: String
+)
+
+@Entity(tableName = "patients")
+data class PatientEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val age: Int,
+    val diagnosis: String,
+    val lastActivity: String,
+    val hasCriticalAlert: Boolean = false,
+    val professionalOwnerId: String
+)
+
 
 //================================================
 // 2. DAOs (Las Consultas a las Tablas)
@@ -89,6 +109,22 @@ interface MedsReminderDao {
     fun getAllReminders(): Flow<List<MedsReminderEntity>>
 }
 
+@Dao
+interface ProfessionalDao {
+    @Upsert
+    suspend fun upsertProfessional(professional: ProfessionalEntity)
+
+    @Upsert
+    suspend fun upsertPatient(patient: PatientEntity)
+
+    @Query("SELECT * FROM patients WHERE professionalOwnerId = :professionalId")
+    fun getPatientsForProfessional(professionalId: String): Flow<List<PatientEntity>>
+
+    @Query("SELECT * FROM patients WHERE id = :patientId")
+    fun getPatientById(patientId: String): Flow<PatientEntity?>
+}
+
+
 //================================================
 // 3. CLASE DE LA BASE DE DATOS (El Edificio Central)
 //================================================
@@ -98,9 +134,13 @@ interface MedsReminderDao {
         Note::class,
         PersonalDataEntity::class,
         EmergencyContactEntity::class,
-        MedsReminderEntity::class
+        MedsReminderEntity::class,
+        ProfessionalEntity::class,
+        PatientEntity::class
     ],
-    version = 2, // Incrementa este número si cambias la estructura de las tablas
+    // --- ¡CORRECCIÓN 1! ---
+    // Has aumentado la versión, ¡perfecto! Esto le dice a Room que hay cambios.
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -109,6 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun personalDataDao(): PersonalDataDao
     abstract fun emergencyContactDao(): EmergencyContactDao
     abstract fun medsReminderDao(): MedsReminderDao
+    abstract fun professionalDao(): ProfessionalDao
 
     companion object {
         @Volatile
@@ -121,8 +162,12 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "healing_database"
                 )
+                    // --- ¡CORRECCIÓN 2! ---
+                    // Esta es la línea que faltaba y que soluciona el crash.
+                    // Le dice a Room que destruya la base de datos antigua y cree una nueva.
                     .fallbackToDestructiveMigration()
                     .build()
+
                 INSTANCE = instance
                 instance
             }

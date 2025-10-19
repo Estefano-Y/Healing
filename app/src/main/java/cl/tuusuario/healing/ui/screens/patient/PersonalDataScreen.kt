@@ -1,7 +1,12 @@
 package cl.tuusuario.healing.ui.screens.patient
 
 import androidx.compose.animation.AnimatedContent
+
 import androidx.compose.animation.Crossfade
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -10,8 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,42 +37,40 @@ fun PersonalDataScreen(
 ) {
     // --- 1. OBTENCIÓN DE DEPENDENCIAS Y VIEWMODEL (LA PARTE CLAVE) ---
     val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
+    val db = remember { AppDatabase.getDatabase(context) }
+
+    // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
     val repository = remember {
         PatientDataRepository(
             noteDao = db.noteDao(),
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
-            medsReminderDao = db.medsReminderDao()
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao() // <-- Se añade el DAO que faltaba
         )
     }
+    // --- FIN DE LA CORRECCIÓN ---
+
     val viewModel: PersonalDataViewModel = viewModel(factory = ViewModelFactory(repository))
     val dataFromDb by viewModel.personalDataState.collectAsState()
 
     // --- ESTADOS LOCALES DE LA UI ---
     var isInEditMode by remember { mutableStateOf(false) }
 
-    // Estados para cada campo del formulario. Ahora se inicializan vacíos.
     var name by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf("") }
     var bloodType by remember { mutableStateOf("") }
-    // Tu entidad PersonalDataEntity no tiene phone, email, ni observations.
-    // Los mantenemos como estado local por ahora.
     var allergies by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var observations by remember { mutableStateOf("") }
 
-
-    // Este efecto se ejecuta cuando los datos de la BD cambian.
-    // Rellena los campos de la UI con los datos persistidos.
     LaunchedEffect(dataFromDb) {
         dataFromDb?.let { data ->
             name = data.name
             birthDate = data.birthDate
             bloodType = data.bloodType
             allergies = data.allergies
-            // Aquí podrías cargar phone, email, etc., si los añadieras a la Entidad.
         }
     }
 
@@ -91,8 +92,6 @@ fun PersonalDataScreen(
             FloatingActionButton(
                 onClick = {
                     if (isInEditMode) {
-                        // --- ¡LÓGICA DE GUARDADO REAL! ---
-                        // Llamamos al ViewModel para guardar los datos en la base de datos.
                         viewModel.savePersonalData(
                             name = name,
                             birthDate = birthDate,
@@ -103,7 +102,6 @@ fun PersonalDataScreen(
                             snackbarHostState.showSnackbar("Datos guardados correctamente")
                         }
                     }
-                    // Cambiamos el modo de edición
                     isInEditMode = !isInEditMode
                 }
             ) {
@@ -117,7 +115,7 @@ fun PersonalDataScreen(
             }
         }
     ) { paddingValues ->
-        // --- EL RESTO DE TU UI ES PERFECTO Y SE MANTIENE IGUAL ---
+        // El resto de la UI está perfecto.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -141,7 +139,7 @@ fun PersonalDataScreen(
                 onValueChange = { birthDate = it },
                 editMode = isInEditMode,
                 leadingIcon = { Icon(Icons.Default.Cake, contentDescription = null) },
-                keyboardType = KeyboardType.Text // Cambiado a texto para flexibilidad
+                keyboardType = KeyboardType.Text
             )
             EditableDataField(
                 label = "Tipo de Sangre",
@@ -193,7 +191,7 @@ fun PersonalDataScreen(
     }
 }
 
-// Tus composables privados (SectionTitle y EditableDataField) son perfectos y no necesitan cambios.
+// Tus composables privados están perfectos y no necesitan cambios.
 @Composable
 private fun SectionTitle(title: String) {
     Text(
@@ -242,7 +240,6 @@ private fun EditableDataField(
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    // Muestra un guion si el valor está vacío, para que no se vea raro en modo vista
                     Text(value.ifEmpty { "-" }, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 2.dp))
                 }
             }

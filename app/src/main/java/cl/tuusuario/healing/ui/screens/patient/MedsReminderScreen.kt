@@ -24,22 +24,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-// --- ¡IMPORTS DE LA ARQUITECTURA! ---
 import cl.tuusuario.healing.data.local.AppDatabase
 import cl.tuusuario.healing.data.local.MedsReminderEntity
 import cl.tuusuario.healing.data.local.repository.PatientDataRepository
-// Ruta correcta a tu ViewModel, dentro de 'screens'
 import cl.tuusuario.healing.ui.screens.viewmodels.MedsReminderViewModel
 import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
 
-// Enum para agrupar, lo mantenemos porque es útil para la UI
+// --- ¡CORRECCIÓN! Se restaura el contenido de estas funciones auxiliares ---
 private enum class TimePeriod(val displayName: String) {
     MORNING("☀️ Mañana"),
     AFTERNOON("🕛 Tarde"),
     NIGHT("🌙 Noche")
 }
 
-// Función auxiliar para clasificar un recordatorio en un período de tiempo
 private fun getTimePeriod(time: String): TimePeriod {
     val hour = time.split(":")[0].toIntOrNull() ?: 0
     return when (hour) {
@@ -48,30 +45,31 @@ private fun getTimePeriod(time: String): TimePeriod {
         else -> TimePeriod.NIGHT
     }
 }
+// --- FIN DE LA CORRECCIÓN ---
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MedsReminderScreen(onBack: () -> Unit) {
 
-    // --- 1. CONEXIÓN AL VIEWMODEL Y A LA BASE DE DATOS ---
+    // Esta parte ya está correcta
     val context = LocalContext.current
     val repository = remember {
         val db = AppDatabase.getDatabase(context)
         PatientDataRepository(
-            db.noteDao(),
-            db.personalDataDao(),
-            db.emergencyContactDao(),
-            db.medsReminderDao()
+            noteDao = db.noteDao(),
+            personalDataDao = db.personalDataDao(),
+            emergencyContactDao = db.emergencyContactDao(),
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao()
         )
     }
+
     val viewModel: MedsReminderViewModel = viewModel(factory = ViewModelFactory(repository))
-    // Obtenemos la lista real de recordatorios desde la base de datos
     val allMedications by viewModel.remindersState.collectAsState()
 
-    // --- ESTADO PARA EL DIÁLOGO DE AÑADIR ---
     var showAddDialog by remember { mutableStateOf(false) }
 
-    // Agrupamos los medicamentos que vienen de la BD por período de tiempo
     val groupedMeds = allMedications.groupBy { getTimePeriod(it.time) }
 
     Scaffold(
@@ -91,7 +89,6 @@ fun MedsReminderScreen(onBack: () -> Unit) {
             }
         }
     ) { paddingValues ->
-        // Si la lista está vacía, muestra un mensaje
         if (allMedications.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
@@ -108,7 +105,6 @@ fun MedsReminderScreen(onBack: () -> Unit) {
             ) {
                 TimePeriod.values().forEach { period ->
                     groupedMeds[period]?.let { medsInPeriod ->
-                        // Título de la sección (Mañana, Tarde, Noche)
                         stickyHeader {
                             Surface(modifier = Modifier.fillParentMaxWidth(), color = MaterialTheme.colorScheme.surface) {
                                 Text(
@@ -118,15 +114,11 @@ fun MedsReminderScreen(onBack: () -> Unit) {
                                 )
                             }
                         }
-
-                        // Lista de medicamentos para ese período
                         items(medsInPeriod, key = { it.id }) { medication ->
                             TimelineNode(
                                 medication = medication,
-                                // onTakenChange ahora llama al ViewModel
                                 onTakenChange = { viewModel.toggleIsTaken(medication) },
                                 onDelete = { viewModel.deleteReminder(medication.id) },
-                                // No dibujamos la línea para el último elemento del grupo
                                 drawConnectorLine = medication != medsInPeriod.last()
                             )
                         }
@@ -136,7 +128,6 @@ fun MedsReminderScreen(onBack: () -> Unit) {
         }
     }
 
-    // --- DIÁLOGO PARA AÑADIR UN NUEVO RECORDATORIO ---
     if (showAddDialog) {
         AddReminderDialog(
             onDismiss = { showAddDialog = false },
@@ -148,9 +139,7 @@ fun MedsReminderScreen(onBack: () -> Unit) {
     }
 }
 
-// --- COMPOSABLES DE LA UI (TimelineNode, MedicationCard, etc.) ---
-// Los he adaptado para que usen `MedsReminderEntity` en lugar de tu `Medication` local.
-
+// --- ¡CORRECCIÓN! Se restaura el contenido de los Composables privados ---
 @Composable
 private fun TimelineNode(
     medication: MedsReminderEntity,
@@ -161,7 +150,6 @@ private fun TimelineNode(
     Row(
         modifier = Modifier.height(IntrinsicSize.Min)
     ) {
-        // Columna de la Línea de Tiempo
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(60.dp)
@@ -170,8 +158,6 @@ private fun TimelineNode(
             Spacer(Modifier.height(8.dp))
             TimelineIndicator(isTaken = medication.isTaken, drawConnectorLine = drawConnectorLine)
         }
-
-        // Tarjeta del Medicamento
         MedicationCard(
             medication = medication,
             onTakenChange = onTakenChange,
@@ -231,7 +217,7 @@ private fun MedicationCard(
             }
             Checkbox(
                 checked = medication.isTaken,
-                onCheckedChange = { onTakenChange() } // Llamada simple, el VM tiene el contexto
+                onCheckedChange = { onTakenChange() }
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Eliminar recordatorio", tint = MaterialTheme.colorScheme.error)
@@ -239,7 +225,6 @@ private fun MedicationCard(
         }
     }
 }
-
 
 @Composable
 private fun AddReminderDialog(

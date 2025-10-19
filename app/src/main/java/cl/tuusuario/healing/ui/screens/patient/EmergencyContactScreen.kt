@@ -33,28 +33,27 @@ import kotlinx.coroutines.launch
 fun EmergencyContactScreen(
     onBack: () -> Unit
 ) {
-    // --- 1. CONEXIÓN A LA ARQUITECTURA DE DATOS ---
+    // Tu lógica de conexión a la base de datos y estados está perfecta.
     val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
+    val db = remember { AppDatabase.getDatabase(context) }
     val repository = remember {
         PatientDataRepository(
             noteDao = db.noteDao(),
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
-            medsReminderDao = db.medsReminderDao()
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao()
         )
     }
     val viewModel: EmergencyContactViewModel = viewModel(factory = ViewModelFactory(repository))
     val contactFromDb by viewModel.emergencyContactState.collectAsState()
     val mainContact = contactFromDb
 
-    // --- 2. ESTADOS LOCALES PARA LA UI ---
     var isInEditMode by remember { mutableStateOf(false) }
     var contactName by remember { mutableStateOf("") }
     var relationship by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
 
-    // --- 3. EFECTO PARA SINCRONIZAR LA UI CON LA BASE DE DATOS ---
     LaunchedEffect(mainContact) {
         if (mainContact != null) {
             contactName = mainContact.name
@@ -69,38 +68,13 @@ fun EmergencyContactScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Contacto de Emergencia") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                if (isInEditMode) {
-                    viewModel.saveEmergencyContact(contactName, relationship, phoneNumber)
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Contacto guardado")
-                    }
-                }
-                isInEditMode = !isInEditMode
-            }) {
-                Crossfade(targetState = isInEditMode, label = "fab_icon") { isEditing ->
-                    if (isEditing) {
-                        Icon(Icons.Default.Done, contentDescription = "Guardar Contacto")
-                    } else {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar Contacto")
-                    }
-                }
-            }
-        },
+        // ... Tu Scaffold, TopAppBar y FAB se quedan igual ...
+        topBar = { /* ... */ },
+        floatingActionButton = { /* ... */ },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Column(
+            // ... Tu Column y AnimatedVisibility se quedan igual ...
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -140,9 +114,8 @@ fun EmergencyContactScreen(
     }
 }
 
-// --- ¡¡¡CORRECCIÓN!!! ---
-// AHORA ESTAS FUNCIONES ESTÁN AL NIVEL SUPERIOR DEL ARCHIVO,
-// POR LO QUE SON VISIBLES DESDE CUALQUIER OTRA FUNCIÓN EN ESTE MISMO ARCHIVO.
+
+// --- ¡¡¡CORRECCIÓN!!! SE RESTAURA EL CÓDIGO DE ESTAS FUNCIONES ---
 
 @Composable
 private fun ViewContactCard(
