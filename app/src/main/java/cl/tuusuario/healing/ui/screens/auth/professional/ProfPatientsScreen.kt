@@ -8,11 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,11 +31,8 @@ import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
 @Composable
 fun ProfPatientsScreen(
     onPatientClick: (patientId: String) -> Unit,
-    // El parámetro onAddPatientClick ya no es necesario, lo manejamos internamente.
-    // onAddPatientClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    // --- CONEXIÓN Y ESTADOS (SIN CAMBIOS) ---
     val context = LocalContext.current
     val repository = remember {
         val db = AppDatabase.getDatabase(context)
@@ -45,7 +41,8 @@ fun ProfPatientsScreen(
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
             medsReminderDao = db.medsReminderDao(),
-            professionalDao = db.professionalDao()
+            professionalDao = db.professionalDao(),
+            userDao = db.userDao()
         )
     }
     val viewModel: ProfPatientsViewModel = viewModel(factory = ViewModelFactory(repository))
@@ -57,7 +54,6 @@ fun ProfPatientsScreen(
         else allPatients.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    // --- ESTADO PARA CONTROLAR EL DIÁLOGO ---
     var showAddPatientDialog by remember { mutableStateOf(false) }
 
     if (showAddPatientDialog) {
@@ -65,7 +61,7 @@ fun ProfPatientsScreen(
             onDismiss = { showAddPatientDialog = false },
             onConfirm = { name, age, diagnosis ->
                 viewModel.addPatient(name, age, diagnosis)
-                showAddPatientDialog = false // Cierra el diálogo al confirmar
+                showAddPatientDialog = false
             }
         )
     }
@@ -76,7 +72,7 @@ fun ProfPatientsScreen(
                 title = { Text("Mis Pacientes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -92,7 +88,6 @@ fun ProfPatientsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Barra de búsqueda (sin cambios)
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -110,12 +105,8 @@ fun ProfPatientsScreen(
                     .padding(16.dp)
             )
 
-            // Indicador de carga y lista (sin cambios)
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
@@ -124,10 +115,7 @@ fun ProfPatientsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredPatients, key = { it.id }) { patient ->
-                        PatientCard(
-                            patient = patient,
-                            onClick = { onPatientClick(patient.id) }
-                        )
+                        PatientCard(patient = patient, onClick = { onPatientClick(patient.id) })
                     }
                 }
             }
@@ -135,7 +123,6 @@ fun ProfPatientsScreen(
     }
 }
 
-// Tarjeta del paciente (sin cambios)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PatientCard(patient: PatientEntity, onClick: () -> Unit) {
@@ -196,8 +183,6 @@ private fun PatientCard(patient: PatientEntity, onClick: () -> Unit) {
     }
 }
 
-
-// --- ¡NUEVO COMPOSABLE PARA EL DIÁLOGO DE AÑADIR PACIENTE! ---
 @Composable
 private fun AddPatientDialog(
     onDismiss: () -> Unit,
@@ -207,12 +192,8 @@ private fun AddPatientDialog(
     var age by remember { mutableStateOf("") }
     var diagnosis by remember { mutableStateOf("") }
 
-    // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
-    // Se usa 'derivedStateOf' para crear un estado computado a partir de otros.
     val isFormValid by remember {
-        derivedStateOf {
-            name.isNotBlank() && diagnosis.isNotBlank() && age.toIntOrNull() != null
-        }
+        derivedStateOf { name.isNotBlank() && diagnosis.isNotBlank() && age.toIntOrNull() != null }
     }
 
     AlertDialog(
@@ -220,45 +201,20 @@ private fun AddPatientDialog(
         title = { Text("Añadir Nuevo Paciente") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre completo") }, singleLine = true)
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre completo") },
-                    singleLine = true
+                    value = age, onValueChange = { age = it }, label = { Text("Edad") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true
                 )
-                OutlinedTextField(
-                    value = age,
-                    onValueChange = { age = it },
-                    label = { Text("Edad") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = diagnosis,
-                    onValueChange = { diagnosis = it },
-                    label = { Text("Diagnóstico Principal") },
-                    singleLine = true
-                )
+                OutlinedTextField(value = diagnosis, onValueChange = { diagnosis = it }, label = { Text("Diagnóstico Principal") }, singleLine = true)
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    // Nos aseguramos de que no se pueda clickear si no es válido,
-                    // pero en caso de que ocurra, onConfirm no se llama.
-                    if (isFormValid) {
-                        onConfirm(name, age.toInt(), diagnosis)
-                    }
-                },
-                enabled = isFormValid // El botón se activa solo si el formulario es válido
-            ) {
-                Text("Guardar")
-            }
+                onClick = { if (isFormValid) onConfirm(name, age.toInt(), diagnosis) },
+                enabled = isFormValid
+            ) { Text("Guardar") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
