@@ -13,7 +13,8 @@ data class Note(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,
-    val content: String
+    val content: String,
+    val createdAt: Long = System.currentTimeMillis() // <-- ¡NUEVO! Campo de fecha y hora
 )
 
 @Entity(tableName = "personal_data")
@@ -78,12 +79,12 @@ data class UserEntity(
 @Dao
 interface NoteDao {
     @Upsert
-    fun upsertNote(note: Note)
+    suspend fun upsertNote(note: Note)
 
     @Delete
-    fun deleteNote(note: Note)
+    suspend fun deleteNote(note: Note)
 
-    @Query("SELECT * FROM notes ORDER BY id DESC")
+    @Query("SELECT * FROM notes ORDER BY createdAt DESC") // <-- CAMBIO: Ordenamos por fecha de creación
     fun getAllNotes(): Flow<List<Note>>
 }
 
@@ -116,7 +117,6 @@ interface MedsReminderDao {
     @Query("SELECT * FROM medication_reminders ORDER BY time ASC")
     fun getAllReminders(): Flow<List<MedsReminderEntity>>
 
-    // --- ¡CAMBIO! --- Ahora devuelve todas las tareas no tomadas, ordenadas por hora.
     @Query("SELECT * FROM medication_reminders WHERE isTaken = 0 ORDER BY time ASC")
     fun getUntakenReminders(): Flow<List<MedsReminderEntity>>
 }
@@ -160,7 +160,7 @@ interface UserDao {
         PatientEntity::class,
         UserEntity::class
     ],
-    version = 4, // La versión no cambia porque solo modificamos una consulta
+    version = 5, // <-- CAMBIO: Incrementamos la versión de la BD
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

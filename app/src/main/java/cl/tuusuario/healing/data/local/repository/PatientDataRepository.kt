@@ -30,8 +30,9 @@ class PatientDataRepository(
 
     // --- Funciones para Notas ---
     fun getAllNotes(): Flow<List<Note>> = noteDao.getAllNotes()
-    fun upsertNote(note: Note) = noteDao.upsertNote(note)
-    fun deleteNote(note: Note) = noteDao.deleteNote(note)
+    // --- ¡CORRECCIÓN! Se añade la palabra clave suspend ---
+    suspend fun upsertNote(note: Note) = noteDao.upsertNote(note)
+    suspend fun deleteNote(note: Note) = noteDao.deleteNote(note)
 
     // --- Funciones para Datos Personales ---
     fun getPersonalData(): Flow<PersonalDataEntity?> = personalDataDao.getPersonalData()
@@ -45,7 +46,6 @@ class PatientDataRepository(
     fun getAllMedsReminders(): Flow<List<MedsReminderEntity>> = medsReminderDao.getAllReminders()
     suspend fun upsertMedsReminder(reminder: MedsReminderEntity) = medsReminderDao.upsertReminder(reminder)
     suspend fun deleteMedsReminder(reminderId: Int) = medsReminderDao.deleteReminderById(reminderId)
-    // --- ¡CAMBIO! --- Ahora se llama a la nueva función del DAO.
     fun getUntakenReminders(): Flow<List<MedsReminderEntity>> = medsReminderDao.getUntakenReminders()
 
     // --- Funciones para Profesionales ---
