@@ -1,6 +1,5 @@
 package cl.tuusuario.healing.data.local.repository
 
-// --- ¡Nuevos imports! ---
 import cl.tuusuario.healing.data.local.Note
 import cl.tuusuario.healing.data.local.NoteDao
 import cl.tuusuario.healing.data.local.EmergencyContactDao
@@ -12,6 +11,8 @@ import cl.tuusuario.healing.data.local.PersonalDataEntity
 import cl.tuusuario.healing.data.local.PatientEntity
 import cl.tuusuario.healing.data.local.ProfessionalDao
 import cl.tuusuario.healing.data.local.ProfessionalEntity
+import cl.tuusuario.healing.data.local.UserDao
+import cl.tuusuario.healing.data.local.UserEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -23,7 +24,8 @@ class PatientDataRepository(
     private val personalDataDao: PersonalDataDao,
     private val emergencyContactDao: EmergencyContactDao,
     private val medsReminderDao: MedsReminderDao,
-    private val professionalDao: ProfessionalDao
+    private val professionalDao: ProfessionalDao,
+    private val userDao: UserDao
 ) {
 
     // --- Funciones para Notas ---
@@ -43,10 +45,10 @@ class PatientDataRepository(
     fun getAllMedsReminders(): Flow<List<MedsReminderEntity>> = medsReminderDao.getAllReminders()
     suspend fun upsertMedsReminder(reminder: MedsReminderEntity) = medsReminderDao.upsertReminder(reminder)
     suspend fun deleteMedsReminder(reminderId: Int) = medsReminderDao.deleteReminderById(reminderId)
+    // --- ¡CAMBIO! --- Ahora se llama a la nueva función del DAO.
+    fun getUntakenReminders(): Flow<List<MedsReminderEntity>> = medsReminderDao.getUntakenReminders()
 
-
-    // --- NUEVAS FUNCIONES PARA EL PROFESIONAL ---
-
+    // --- Funciones para Profesionales ---
     fun getPatientsForProfessional(professionalId: String): Flow<List<PatientEntity>> {
         return professionalDao.getPatientsForProfessional(professionalId)
     }
@@ -55,22 +57,28 @@ class PatientDataRepository(
         return professionalDao.getPatientById(patientId)
     }
 
-    // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
-    // Se añade la función que faltaba para que el ViewModel pueda guardar pacientes.
     suspend fun upsertPatient(patient: PatientEntity) {
         professionalDao.upsertPatient(patient)
     }
-    // --- FIN DE LA CORRECCIÓN ---
 
+    // --- Funciones para Registro y Login de Usuarios ---
+    suspend fun registerUser(name: String, email: String, password: String): Boolean {
+        val passwordHash = password
+        val user = UserEntity(name = name, email = email, passwordHash = passwordHash)
+        return userDao.insertUser(user) != -1L
+    }
+
+    suspend fun findUserByEmail(email: String): UserEntity? {
+        return userDao.getUserByEmail(email)
+    }
 
     // --- Función para añadir datos de prueba fácilmente ---
-    // La usaremos para no tener que registrar todo a mano al probar.
     suspend fun addDummyProfessionalData() {
         val professionalId = "dr.house@example.com"
         professionalDao.upsertProfessional(
             ProfessionalEntity(id = professionalId, name = "Dr. Gregory House", specialty = "Nefrología")
         )
-        upsertPatient( // Ahora podemos llamar a nuestra propia función de repositorio
+        upsertPatient(
             PatientEntity("p001", "Juan Pérez", 45, "Hipertensión", "Hoy, 14:30", true, professionalId)
         )
         upsertPatient(

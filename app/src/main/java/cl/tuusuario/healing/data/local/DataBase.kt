@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
-// ... (Todas tus entidades y DAOs están perfectos, no necesitan cambios)
 //============================================
 // 1. ENTIDADES (Las Tablas de la Base de Datos)
 //============================================
@@ -62,6 +61,15 @@ data class PatientEntity(
     val professionalOwnerId: String
 )
 
+@Entity(tableName = "users")
+data class UserEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    val name: String,
+    @ColumnInfo(index = true)
+    val email: String,
+    val passwordHash: String
+)
 
 //================================================
 // 2. DAOs (Las Consultas a las Tablas)
@@ -107,6 +115,10 @@ interface MedsReminderDao {
 
     @Query("SELECT * FROM medication_reminders ORDER BY time ASC")
     fun getAllReminders(): Flow<List<MedsReminderEntity>>
+
+    // --- ¡CAMBIO! --- Ahora devuelve todas las tareas no tomadas, ordenadas por hora.
+    @Query("SELECT * FROM medication_reminders WHERE isTaken = 0 ORDER BY time ASC")
+    fun getUntakenReminders(): Flow<List<MedsReminderEntity>>
 }
 
 @Dao
@@ -124,6 +136,15 @@ interface ProfessionalDao {
     fun getPatientById(patientId: String): Flow<PatientEntity?>
 }
 
+@Dao
+interface UserDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertUser(user: UserEntity): Long
+
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): UserEntity?
+}
+
 
 //================================================
 // 3. CLASE DE LA BASE DE DATOS (El Edificio Central)
@@ -136,11 +157,10 @@ interface ProfessionalDao {
         EmergencyContactEntity::class,
         MedsReminderEntity::class,
         ProfessionalEntity::class,
-        PatientEntity::class
+        PatientEntity::class,
+        UserEntity::class
     ],
-    // --- ¡CORRECCIÓN 1! ---
-    // Has aumentado la versión, ¡perfecto! Esto le dice a Room que hay cambios.
-    version = 3,
+    version = 4, // La versión no cambia porque solo modificamos una consulta
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -150,6 +170,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun emergencyContactDao(): EmergencyContactDao
     abstract fun medsReminderDao(): MedsReminderDao
     abstract fun professionalDao(): ProfessionalDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
@@ -162,9 +183,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "healing_database"
                 )
-                    // --- ¡CORRECCIÓN 2! ---
-                    // Esta es la línea que faltaba y que soluciona el crash.
-                    // Le dice a Room que destruya la base de datos antigua y cree una nueva.
                     .fallbackToDestructiveMigration()
                     .build()
 

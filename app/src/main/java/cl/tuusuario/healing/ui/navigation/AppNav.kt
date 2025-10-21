@@ -19,11 +19,9 @@ import cl.tuusuario.healing.ui.screens.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.professional.RegisterAttentionScreen
 
 
-// El objeto Routes no necesita cambios.
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
-    const val PATIENT_HOME = "patient_home"
     const val PROFESSIONAL_HOME = "professional_home"
     const val NOTES = "notes"
     const val EMERGENCY = "emergency"
@@ -33,10 +31,19 @@ object Routes {
     const val PROF_AGENDA = "prof_agenda"
     const val PROF_PATIENTS = "prof_patients"
     const val PROF_REGISTER = "prof_register"
+
+    // Rutas dinámicas para detalles de paciente y home de paciente
     private const val PATIENT_DETAIL_ARG = "patientId"
+    private const val PATIENT_HOME_ARG = "userName"
+
     const val PATIENT_DETAIL = "patient_detail"
+    const val PATIENT_HOME = "patient_home"
+
     const val PATIENT_DETAIL_ROUTE = "$PATIENT_DETAIL/{$PATIENT_DETAIL_ARG}"
+    const val PATIENT_HOME_ROUTE = "$PATIENT_HOME/{$PATIENT_HOME_ARG}"
+
     fun patientDetailRoute(patientId: String) = "$PATIENT_DETAIL/$patientId"
+    fun patientHomeRoute(userName: String) = "$PATIENT_HOME/$userName"
 }
 
 
@@ -44,7 +51,6 @@ object Routes {
 fun AppNav(startDestination: String = Routes.LOGIN) {
     val nav = rememberNavController()
 
-    // Las animaciones están perfectas.
     val slideIn = slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(350))
     val slideOut = slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(350))
     val popSlideIn = slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(350))
@@ -64,7 +70,7 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
             exitTransition = { fadeOut(animationSpec = tween(500)) }
         ) {
             LoginScreen(
-                onLoginAsPatient = { nav.navigate(Routes.PATIENT_HOME) },
+                onLoginAsPatient = { userName -> nav.navigate(Routes.patientHomeRoute(userName)) },
                 onLoginAsProfessional = { nav.navigate(Routes.PROFESSIONAL_HOME) },
                 onGoToRegister = { nav.navigate(Routes.REGISTER) }
             )
@@ -75,7 +81,13 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
         }
 
         // --- NAVEGACIÓN DEL PACIENTE ---
-        composable(Routes.PATIENT_HOME) { PatientHomeScreen(nav) }
+        composable(
+            route = Routes.PATIENT_HOME_ROUTE,
+            arguments = listOf(navArgument("userName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userName = backStackEntry.arguments?.getString("userName") ?: ""
+            PatientHomeScreen(nav, userName)
+        }
         composable(Routes.NOTES) { NotesScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.EMERGENCY) { EmergencyContactScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.PERSONAL) { PersonalDataScreen(onBack = { nav.popBackStack() }) }
@@ -86,18 +98,14 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
         composable(Routes.PROFESSIONAL_HOME) { ProfessionalHomeScreen(nav) }
         composable(Routes.PROF_AGENDA) { ProfAgendaScreen(onBack = { nav.popBackStack() }) }
 
-        // --- ¡¡¡CORRECCIÓN AQUÍ!!! ---
         composable(Routes.PROF_PATIENTS) {
             ProfPatientsScreen(
                 onPatientClick = { patientId ->
                     nav.navigate(Routes.patientDetailRoute(patientId))
                 },
-                // El parámetro onAddPatientClick ya no se pasa,
-                // porque la lógica del diálogo ahora está dentro de la pantalla.
                 onBack = { nav.popBackStack() }
             )
         }
-        // --- FIN DE LA CORRECCIÓN ---
 
         composable(Routes.PROF_REGISTER) { RegisterAttentionScreen(onBack = { nav.popBackStack() }) }
 
