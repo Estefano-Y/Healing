@@ -1,28 +1,26 @@
 package cl.tuusuario.healing.ui.screens.patient.notes
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-// --- ¡IMPORTS FINALES Y CORRECTOS! ---
 import cl.tuusuario.healing.data.local.AppDatabase
 import cl.tuusuario.healing.data.local.Note
 import cl.tuusuario.healing.data.local.repository.PatientDataRepository
-// La ruta correcta NO incluye 'screens'
 import cl.tuusuario.healing.ui.screens.viewmodels.NotesViewModel
 import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
 import kotlinx.coroutines.launch
@@ -33,19 +31,17 @@ fun NotesScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val db = remember { AppDatabase.getDatabase(context) }
-
-    // --- ¡¡¡CORRECCIÓN FINAL AQUÍ!!! ---
     val repository = remember {
+        val db = AppDatabase.getDatabase(context)
         PatientDataRepository(
             noteDao = db.noteDao(),
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
             medsReminderDao = db.medsReminderDao(),
-            professionalDao = db.professionalDao() // <-- Se añade el DAO que faltaba
+            professionalDao = db.professionalDao(),
+            userDao = db.userDao()
         )
     }
-    // --- FIN DE LA CORRECIÓN ---
 
     val viewModel: NotesViewModel = viewModel(factory = ViewModelFactory(repository))
     val notesState by viewModel.notesState.collectAsState()
@@ -60,7 +56,7 @@ fun NotesScreen(
                 title = { Text("Mis Notas") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -120,7 +116,6 @@ fun NotesScreen(
     }
 }
 
-// El resto de tus Composables están perfectos y no necesitan cambios.
 @Composable
 fun NoteItem(note: Note, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     Card(
@@ -164,4 +159,3 @@ private fun AddNoteDialog(onDismiss: () -> Unit, onConfirm: (title: String, cont
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
-
