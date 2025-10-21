@@ -1,41 +1,42 @@
-package cl.tuusuario.healing.ui.screens.viewmodels // Paquete centralizado
+package cl.tuusuario.healing.ui.screens.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.tuusuario.healing.data.local.Note
-// --- ¡IMPORT CORRECTO DEL REPOSITORIO! ---
 import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel para la pantalla de Notas.
  * Expone el estado de las notas y las acciones para modificarlas.
  */
 class NotesViewModel(
-    private val repository: PatientDataRepository // Pide el repositorio unificado
+    private val repository: PatientDataRepository
 ) : ViewModel() {
 
-    // Expone la lista de todas las notas como un StateFlow que la UI puede consumir.
     val notesState: StateFlow<List<Note>> = repository.getAllNotes()
         .stateIn(
             scope = viewModelScope,
-            // Inicia el flujo cuando la UI está visible y lo detiene 5 segundos después.
             started = SharingStarted.WhileSubscribed(5000L),
-            // El valor inicial mientras se cargan los datos es una lista vacía.
             initialValue = emptyList()
         )
 
-    // Función para crear o actualizar una nota.
-    // No necesita viewModelScope.launch porque la función del DAO no es 'suspend'.
-    // Room ya lo ejecuta en un hilo de fondo.
+    // --- ¡CORRECCIÓN! ---
+    // Ambas acciones ahora se ejecutan dentro de un viewModelScope.launch
+    // para asegurar que las operaciones de base de datos se hagan en un hilo secundario.
+
     fun upsertNote(note: Note) {
-        repository.upsertNote(note)
+        viewModelScope.launch {
+            repository.upsertNote(note)
+        }
     }
 
-    // Función para borrar una nota.
     fun deleteNote(note: Note) {
-        repository.deleteNote(note)
+        viewModelScope.launch {
+            repository.deleteNote(note)
+        }
     }
 }

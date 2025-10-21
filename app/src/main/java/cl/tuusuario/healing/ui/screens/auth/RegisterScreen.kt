@@ -1,63 +1,92 @@
 package cl.tuusuario.healing.ui.screens.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.semantics.password
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-// ¡EL ÚNICO IMPORT DE VIEWMODEL QUE NECESITAS!
+import cl.tuusuario.healing.data.local.AppDatabase
+import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import cl.tuusuario.healing.ui.screens.viewmodels.RegisterViewModel
+import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onNavigateBack: () -> Unit // Parámetro para manejar la navegación hacia atrás
+    onNavigateBack: () -> Unit
 ) {
-    // 1. Instanciamos el ViewModel desde la carpeta correcta.
-    val viewModel: RegisterViewModel = viewModel()
+    val context = LocalContext.current
+    val repository = remember {
+        val db = AppDatabase.getDatabase(context)
+        PatientDataRepository(
+            noteDao = db.noteDao(),
+            personalDataDao = db.personalDataDao(),
+            emergencyContactDao = db.emergencyContactDao(),
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao(),
+            userDao = db.userDao()
+        )
+    }
 
-    // 2. Escuchamos eventos de navegación del ViewModel
+    val viewModel: RegisterViewModel = viewModel(factory = ViewModelFactory(repository))
+
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->
             when (event) {
-                is RegisterViewModel.NavigationEvent.NavigateBack -> {
-                    onNavigateBack() // Ejecutamos la acción de navegación
-                }
+                is RegisterViewModel.NavigationEvent.NavigateBack -> onNavigateBack()
             }
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Crear Cuenta") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Crear Cuenta", style = MaterialTheme.typography.headlineLarge)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Únete a Healing",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Es rápido y fácil",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- Campo Nombre ---
             OutlinedTextField(
                 value = viewModel.name,
                 onValueChange = { viewModel.onNameChange(it) },
@@ -66,26 +95,24 @@ fun RegisterScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-            viewModel.nameError?.let { error ->
-                Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            viewModel.nameError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 16.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Campo Email ---
             OutlinedTextField(
                 value = viewModel.email,
                 onValueChange = { viewModel.onEmailChange(it) },
-                label = { Text("Email") },
-                isError = viewModel.emailError != null,
+                label = { Text("Correo Electrónico") },
+                isError = viewModel.emailError != null || viewModel.registrationError != null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-            viewModel.emailError?.let { error ->
-                Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            viewModel.emailError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 16.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Campo Contraseña ---
             OutlinedTextField(
                 value = viewModel.password,
                 onValueChange = { viewModel.onPasswordChange(it) },
@@ -95,12 +122,11 @@ fun RegisterScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
-            viewModel.passwordError?.let { error ->
-                Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            viewModel.passwordError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 16.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Campo Confirmar Contraseña ---
             OutlinedTextField(
                 value = viewModel.confirmPassword,
                 onValueChange = { viewModel.onConfirmPasswordChange(it) },
@@ -110,18 +136,22 @@ fun RegisterScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
-            viewModel.confirmPasswordError?.let { error ->
-                Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            viewModel.confirmPasswordError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 16.dp))
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Botón de Registro ---
+            viewModel.registrationError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = { viewModel.onRegisterClick() },
                 enabled = viewModel.isFormValid,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Registrarse")
+                Text("Crear mi cuenta", style = MaterialTheme.typography.bodyLarge)
             }
         }
     }

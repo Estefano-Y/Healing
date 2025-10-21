@@ -1,10 +1,11 @@
-package cl.tuusuario.healing.ui.screens.viewmodels // Asegúrate que el paquete es el correcto
+package cl.tuusuario.healing.ui.screens.viewmodels
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
  * ViewModel para la pantalla de Registro.
  * Maneja el estado de los campos, la validación y los eventos de navegación.
  */
-class RegisterViewModel : ViewModel() {
+class RegisterViewModel(private val repository: PatientDataRepository) : ViewModel() {
 
     // --- ESTADO DE LA UI ---
     var name by mutableStateOf("")
@@ -34,6 +35,9 @@ class RegisterViewModel : ViewModel() {
     var confirmPasswordError by mutableStateOf<String?>(null)
         private set
 
+    var registrationError by mutableStateOf<String?>(null)
+        private set
+
     val isFormValid: Boolean
         get() = name.isNotBlank() && email.isNotBlank() && password.isNotBlank() &&
                 confirmPassword.isNotBlank() && nameError == null && emailError == null &&
@@ -52,6 +56,7 @@ class RegisterViewModel : ViewModel() {
     fun onEmailChange(newEmail: String) {
         email = newEmail
         emailError = if (!newEmail.contains("@")) "Email no válido" else null
+        registrationError = null // Limpiamos el error al cambiar el email
     }
 
     fun onPasswordChange(newPassword: String) {
@@ -72,11 +77,14 @@ class RegisterViewModel : ViewModel() {
     fun onRegisterClick() {
         if (!isFormValid) return
 
-        // Aquí iría tu lógica de registro (Firebase, API, etc.)
-        // Por ahora, simulamos una navegación hacia atrás exitosa.
         viewModelScope.launch {
-            // Podrías enviar un evento a la UI para mostrar un Toast/Snackbar de "Registro exitoso"
-            _navigationEvent.send(NavigationEvent.NavigateBack)
+            val success = repository.registerUser(name, email, password)
+            if (success) {
+                _navigationEvent.send(NavigationEvent.NavigateBack)
+            } else {
+                emailError = "El email ingresado ya está en uso"
+                registrationError = "El email ingresado ya está en uso"
+            }
         }
     }
 

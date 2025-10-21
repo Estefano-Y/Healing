@@ -15,7 +15,6 @@ class ViewModelFactory(
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        // Obtenemos el SavedStateHandle desde los "extras" de creación.
         val savedStateHandle = extras.createSavedStateHandle()
 
         return when {
@@ -30,8 +29,15 @@ class ViewModelFactory(
                 MedsReminderViewModel(repository) as T
             modelClass.isAssignableFrom(ProfPatientsViewModel::class.java) ->
                 ProfPatientsViewModel(repository) as T
+            modelClass.isAssignableFrom(RegisterViewModel::class.java) ->
+                RegisterViewModel(repository) as T
+            modelClass.isAssignableFrom(LoginViewModel::class.java) ->
+                LoginViewModel(repository) as T
 
-            // --- ¡NUEVO BLOQUE! ViewModel que SÍ necesita SavedStateHandle ---
+            // --- ¡NUEVO! Añadimos el PatientHomeViewModel a la factory ---
+            modelClass.isAssignableFrom(PatientHomeViewModel::class.java) ->
+                PatientHomeViewModel(repository) as T
+
             modelClass.isAssignableFrom(PatientDetailViewModel::class.java) ->
                 PatientDetailViewModel(repository, savedStateHandle) as T
 

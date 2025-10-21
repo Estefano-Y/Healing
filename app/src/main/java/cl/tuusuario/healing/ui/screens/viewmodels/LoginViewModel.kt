@@ -1,19 +1,16 @@
-package cl.tuusuario.healing.ui.screens.viewmodels // Asegúrate que el paquete es el correcto
+package cl.tuusuario.healing.ui.screens.viewmodels
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel para la pantalla de Login.
- * Maneja el estado de los campos, la validación y los eventos de navegación.
- */
-class LoginViewModel : ViewModel() {
+class LoginViewModel(private val repository: PatientDataRepository) : ViewModel() {
 
     // --- ESTADO DE LA UI ---
     var email by mutableStateOf("")
@@ -38,31 +35,36 @@ class LoginViewModel : ViewModel() {
     // --- ACCIONES DESDE LA UI ---
     fun onEmailChange(newEmail: String) {
         email = newEmail
-        // Validación simple
         emailError = if (!newEmail.contains("@")) "Email no válido" else null
-        loginError = null
+        loginError = null // Limpia el error al escribir
     }
 
     fun onPasswordChange(newPassword: String) {
         password = newPassword
-        // Validación simple
         passwordError = if (newPassword.length < 6) "La contraseña debe tener al menos 6 caracteres" else null
-        loginError = null
+        loginError = null // Limpia el error al escribir
     }
 
     fun onLoginClick(asProfessional: Boolean) {
-        if (!isFormValid) {
-            loginError = "Por favor, corrige los errores en el formulario."
-            return
-        }
+        if (!isFormValid) return
 
-        // Aquí iría tu lógica de autenticación (con Firebase, una API, etc.)
-        // Por ahora, simulamos una navegación exitosa.
         viewModelScope.launch {
-            if (asProfessional) {
-                _navigationEvent.send(NavigationEvent.NavigateToProfessionalHome)
+            val user = repository.findUserByEmail(email)
+
+            if (user == null) {
+                loginError = "Usuario no encontrado o contraseña incorrecta"
+                return@launch
+            }
+
+            if (user.passwordHash == password) {
+                if (asProfessional) {
+                    _navigationEvent.send(NavigationEvent.NavigateToProfessionalHome)
+                } else {
+                    // ¡Aquí está el cambio! Enviamos el nombre del usuario.
+                    _navigationEvent.send(NavigationEvent.NavigateToPatientHome(user.name))
+                }
             } else {
-                _navigationEvent.send(NavigationEvent.NavigateToPatientHome)
+                loginError = "Usuario no encontrado o contraseña incorrecta"
             }
         }
     }
@@ -73,9 +75,9 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    // --- CLASES PARA EVENTOS DE NAVEGACIÓN ---
+    // --- CLASE PARA EVENTOS DE NAVEGACIÓN ---
     sealed class NavigationEvent {
-        object NavigateToPatientHome : NavigationEvent()
+        data class NavigateToPatientHome(val userName: String) : NavigationEvent()
         object NavigateToProfessionalHome : NavigationEvent()
         object NavigateToRegister : NavigationEvent()
     }
