@@ -1,9 +1,8 @@
 package cl.tuusuario.healing.ui.screens.patient
 
-// 1. IMPORTS ADICIONALES PARA LAS ANIMACIONES
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi // Para animateItemPlacement
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,11 +11,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,12 +35,12 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-// --- Modelos de datos (sin cambios) ---
 private enum class EventType(val color: Color) {
     APPOINTMENT(Color(0xFF4C6E81)),
     TASK(Color(0xFFE57373)),
     MEAL(Color(0xFF65BBA9))
 }
+
 private data class Event(
     val id: String,
     val date: LocalDate,
@@ -49,11 +50,9 @@ private data class Event(
     val time: String? = null
 )
 
-// Anotaciones para las APIs de animación experimentales
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun CalendarScreen(onBack: () -> Unit) {
-    // --- Datos de Ejemplo (sin cambios) ---
     val events = remember {
         listOf(
             Event("1", LocalDate.now(), "Cita", "Control con Dr. Silva", EventType.APPOINTMENT, "10:00"),
@@ -85,7 +84,7 @@ fun CalendarScreen(onBack: () -> Unit) {
                 title = { Text("Mi Agenda y Plan") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -112,12 +111,10 @@ fun CalendarScreen(onBack: () -> Unit) {
 
             Divider()
 
-            // MEJORA 1 y 2: ANIMAR EL CONTENEDOR DE LA LISTA
             AnimatedContent(
                 targetState = selection,
-                modifier = Modifier.animateContentSize(), // Anima el cambio de altura
+                modifier = Modifier.animateContentSize(),
                 transitionSpec = {
-                    // Define cómo entra y sale el contenido al cambiar de día
                     fadeIn(animationSpec = tween(300)) togetherWith
                             fadeOut(animationSpec = tween(300))
                 },
@@ -131,10 +128,6 @@ fun CalendarScreen(onBack: () -> Unit) {
                 ) {
                     if (selectedEvents.isNotEmpty()) {
                         items(selectedEvents, key = { it.id }) { event ->
-                            // --- CAMBIO APLICADO AQUÍ ---
-                            // Ya no creamos un 'itemModifier' aparte.
-                            // Las animaciones de aparición de items se manejan por el AnimatedContent exterior.
-                            // El 'animateItemPlacement' se aplica directamente en el modifier del item para animar reordenamientos.
                             if (event.type == EventType.MEAL) {
                                 MealPlanItem(event, modifier = Modifier.animateItemPlacement())
                             } else {
@@ -163,8 +156,6 @@ fun CalendarScreen(onBack: () -> Unit) {
     }
 }
 
-// --- Componentes de Calendario ---
-
 @Composable
 private fun Day(day: CalendarDay, isSelected: Boolean, events: List<Event>, onClick: (CalendarDay) -> Unit) {
     Box(
@@ -189,7 +180,6 @@ private fun Day(day: CalendarDay, isSelected: Boolean, events: List<Event>, onCl
                 },
                 fontSize = 14.sp
             )
-            // MEJORA 4: ANIMAR LOS PUNTOS DE EVENTOS
             AnimatedVisibility(visible = events.isNotEmpty(), enter = scaleIn(), exit = scaleOut()) {
                 Row(
                     modifier = Modifier.padding(top = 2.dp),
@@ -210,7 +200,7 @@ private fun Day(day: CalendarDay, isSelected: Boolean, events: List<Event>, onCl
 }
 
 @Composable
-private fun MonthHeader(calendarMonth: CalendarMonth) { /* ... sin cambios ... */
+private fun MonthHeader(calendarMonth: CalendarMonth) {
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("es", "ES"))
     Column(
         modifier = Modifier
@@ -239,14 +229,11 @@ private fun MonthHeader(calendarMonth: CalendarMonth) { /* ... sin cambios ... *
     }
 }
 
-
-// --- Componentes de Lista de Eventos (ahora aceptan un Modifier) ---
-
 @Composable
 private fun EventItem(event: Event, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth() // Usa el modifier recibido
+        modifier = modifier.fillMaxWidth()
     ) {
         val icon = when (event.type) {
             EventType.APPOINTMENT -> Icons.Default.MedicalServices
@@ -273,7 +260,7 @@ private fun EventItem(event: Event, modifier: Modifier = Modifier) {
 @Composable
 private fun MealPlanItem(event: Event, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.fillMaxWidth(), // Usa el modifier recibido
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {

@@ -2,24 +2,26 @@ package cl.tuusuario.healing.ui.screens.patient
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -29,8 +31,9 @@ import cl.tuusuario.healing.data.local.MedsReminderEntity
 import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import cl.tuusuario.healing.ui.screens.viewmodels.MedsReminderViewModel
 import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
+import java.util.Calendar
+import java.util.Locale
 
-// --- ¡CORRECCIÓN! Se restaura el contenido de estas funciones auxiliares ---
 private enum class TimePeriod(val displayName: String) {
     MORNING("☀️ Mañana"),
     AFTERNOON("🕛 Tarde"),
@@ -45,14 +48,11 @@ private fun getTimePeriod(time: String): TimePeriod {
         else -> TimePeriod.NIGHT
     }
 }
-// --- FIN DE LA CORRECCIÓN ---
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MedsReminderScreen(onBack: () -> Unit) {
 
-    // Esta parte ya está correcta
     val context = LocalContext.current
     val repository = remember {
         val db = AppDatabase.getDatabase(context)
@@ -61,7 +61,8 @@ fun MedsReminderScreen(onBack: () -> Unit) {
             personalDataDao = db.personalDataDao(),
             emergencyContactDao = db.emergencyContactDao(),
             medsReminderDao = db.medsReminderDao(),
-            professionalDao = db.professionalDao()
+            professionalDao = db.professionalDao(),
+            userDao = db.userDao() // <-- Se añade el userDao que faltaba
         )
     }
 
@@ -78,7 +79,7 @@ fun MedsReminderScreen(onBack: () -> Unit) {
                 title = { Text("Horario de Medicamentos") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -103,7 +104,7 @@ fun MedsReminderScreen(onBack: () -> Unit) {
                     .padding(paddingValues),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                TimePeriod.values().forEach { period ->
+                TimePeriod.entries.forEach { period ->
                     groupedMeds[period]?.let { medsInPeriod ->
                         stickyHeader {
                             Surface(modifier = Modifier.fillParentMaxWidth(), color = MaterialTheme.colorScheme.surface) {
@@ -139,7 +140,6 @@ fun MedsReminderScreen(onBack: () -> Unit) {
     }
 }
 
-// --- ¡CORRECCIÓN! Se restaura el contenido de los Composables privados ---
 @Composable
 private fun TimelineNode(
     medication: MedsReminderEntity,
@@ -226,14 +226,25 @@ private fun MedicationCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddReminderDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, dose: String, time: String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var dose by remember { mutableStateOf("") }
+    val medicationOptions = listOf("Paracetamol", "Ibuprofeno", "Omeprazol", "Amoxicilina", "Loratadina", "Sertralina")
+    var medNameExpanded by remember { mutableStateOf(false) }
+    var selectedMedication by remember { mutableStateOf(medicationOptions[0]) }
+
+    var quantity by remember { mutableStateOf("1") }
+    val doseUnits = listOf("comprimido(s)", "mg", "ml", "cápsula(s)", "gota(s)")
+    var unitExpanded by remember { mutableStateOf(false) }
+    var selectedUnit by remember { mutableStateOf(doseUnits[0]) }
+
+    var showTimePicker by remember { mutableStateOf(false) }
+    val timeState = rememberTimePickerState()
     var time by remember { mutableStateOf("") }
+
 
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp)) {
@@ -243,20 +254,137 @@ private fun AddReminderDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Nuevo Recordatorio", style = MaterialTheme.typography.headlineSmall)
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre del medicamento") })
-                OutlinedTextField(value = dose, onValueChange = { dose = it }, label = { Text("Dosis (ej: 1 comprimido)") })
-                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Hora (ej: 08:00)") })
+
+                ExposedDropdownMenuBox(
+                    expanded = medNameExpanded,
+                    onExpandedChange = { medNameExpanded = !medNameExpanded }
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier.menuAnchor(),
+                        readOnly = true,
+                        value = selectedMedication,
+                        onValueChange = {},
+                        label = { Text("Nombre del medicamento") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = medNameExpanded) },
+                    )
+                    ExposedDropdownMenu(
+                        expanded = medNameExpanded,
+                        onDismissRequest = { medNameExpanded = false },
+                    ) {
+                        medicationOptions.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    selectedMedication = selectionOption
+                                    medNameExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it.filter { char -> char.isDigit() } },
+                        label = { Text("Dosis") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = unitExpanded,
+                        onExpandedChange = { unitExpanded = !unitExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier.menuAnchor(),
+                            readOnly = true,
+                            value = selectedUnit,
+                            onValueChange = {},
+                            label = { Text("Unidad") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
+                        )
+                        ExposedDropdownMenu(
+                            expanded = unitExpanded,
+                            onDismissRequest = { unitExpanded = false },
+                        ) {
+                            doseUnits.forEach { selectionOption ->
+                                DropdownMenuItem(
+                                    text = { Text(selectionOption) },
+                                    onClick = {
+                                        selectedUnit = selectionOption
+                                        unitExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Box {
+                    OutlinedTextField(
+                        value = time.ifEmpty { "" },
+                        onValueChange = {},
+                        label = { Text("Hora") },
+                        placeholder = { Text("Seleccione una hora") },
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Box(modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showTimePicker = true })
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onConfirm(name, dose, time) }) {
+                    Button(
+                        onClick = {
+                            val dose = "$quantity $selectedUnit"
+                            onConfirm(selectedMedication, dose, time)
+                        },
+                        enabled = time.isNotEmpty() && quantity.isNotEmpty()
+                    ) {
                         Text("Guardar")
                     }
                 }
             }
         }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            modifier = Modifier.fillMaxWidth(),
+            title = { Text(text = "Seleccionar Hora", textAlign = TextAlign.Center) },
+            text = {
+                TimePicker(
+                    state = timeState,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val cal = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, timeState.hour)
+                            set(Calendar.MINUTE, timeState.minute)
+                        }
+                        time = String.format(Locale.getDefault(), "%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
+                        showTimePicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
