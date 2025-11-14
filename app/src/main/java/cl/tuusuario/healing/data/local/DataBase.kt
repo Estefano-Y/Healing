@@ -69,7 +69,8 @@ data class UserEntity(
     val name: String,
     @ColumnInfo(index = true)
     val email: String,
-    val passwordHash: String
+    val passwordHash: String,
+    val isAdmin: Boolean = false
 )
 
 //================================================
@@ -143,6 +144,9 @@ interface UserDao {
 
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): UserEntity?
+
+    @Query("SELECT * FROM users")
+    fun getAllUsers(): Flow<List<UserEntity>>
 }
 
 
@@ -160,7 +164,7 @@ interface UserDao {
         PatientEntity::class,
         UserEntity::class
     ],
-    version = 5, // <-- CAMBIO: Incrementamos la versión de la BD
+    version = 6, // <-- CAMBIO: Incremente la versión de la BD
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -1,5 +1,10 @@
 package cl.tuusuario.healing.ui.screens.patient.notes
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +36,14 @@ fun NotesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val repository = remember {
         val db = AppDatabase.getDatabase(context)
-        PatientDataRepository(db.noteDao(), db.personalDataDao(), db.emergencyContactDao(), db.medsReminderDao(), db.professionalDao(), db.userDao())
+        PatientDataRepository(
+            noteDao = db.noteDao(),
+            personalDataDao = db.personalDataDao(),
+            emergencyContactDao = db.emergencyContactDao(),
+            medsReminderDao = db.medsReminderDao(),
+            professionalDao = db.professionalDao(),
+            userDao = db.userDao()
+        )
     }
     val viewModel: NotesViewModel = viewModel(factory = ViewModelFactory(repository))
     val notesState by viewModel.notesState.collectAsState()
@@ -39,6 +51,9 @@ fun NotesScreen(onBack: () -> Unit) {
     var selectedNote by remember { mutableStateOf<Note?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { visible = true }
 
     Scaffold(
         topBar = {
@@ -48,23 +63,27 @@ fun NotesScreen(onBack: () -> Unit) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            AnimatedVisibility(visible = visible, enter = scaleIn(animationSpec = tween(500)))
+            { FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir Nota")
-            }
+            } }
         }
     ) { paddingValues ->
-        if (notesState.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text("Crea tu primera nota")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(notesState, key = { it.id }) { note ->
-                    NoteItem(note = note, onClick = { selectedNote = note })
+        AnimatedVisibility(visible = visible, enter = fadeIn(animationSpec = tween(500))) {
+            if (notesState.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                    Text("Crea tu primera nota")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(notesState, key = { it.id }) { note ->
+                        AnimatedVisibility(visible = true, enter = slideInHorizontally(animationSpec = tween(500)))
+                        { NoteItem(note = note, onClick = { selectedNote = note }) }
+                    }
                 }
             }
         }

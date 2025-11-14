@@ -1,23 +1,26 @@
 package cl.tuusuario.healing.ui.screens.patient
 
 import android.content.Intent
-import android.net.Uri
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.tuusuario.healing.data.local.AppDatabase
 import cl.tuusuario.healing.data.local.repository.PatientDataRepository
@@ -50,7 +53,10 @@ fun EmergencyContactScreen(
     var relationship by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
 
+    var visible by remember { mutableStateOf(false) }
+
     LaunchedEffect(contactFromDb) {
+        visible = true
         if (contactFromDb != null) {
             contactName = contactFromDb!!.name
             relationship = contactFromDb!!.relationship
@@ -62,6 +68,7 @@ fun EmergencyContactScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -71,7 +78,8 @@ fun EmergencyContactScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                modifier = Modifier.alpha(if (scrollState.value > 100) 0.7f else 1.0f)
             )
         },
         floatingActionButton = {
@@ -99,45 +107,51 @@ fun EmergencyContactScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 2 })
         ) {
-            Crossfade(targetState = isInEditMode, label = "ViewEditCrossfade") { isEditing ->
-                if (isEditing) {
-                    EditContactForm(
-                        name = contactName,
-                        onNameChange = { contactName = it },
-                        relationship = relationship,
-                        onRelationshipChange = { relationship = it },
-                        phone = phoneNumber,
-                        onPhoneChange = { phoneNumber = it }
-                    )
-                } else {
-                    contactFromDb?.let {
-                        ViewContactCard(
-                            name = it.name,
-                            relationship = it.relationship,
-                            phone = it.phone,
-                            onCall = {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${it.phone}"))
-                                context.startActivity(intent)
-                            },
-                            onMessage = {
-                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${it.phone}"))
-                                context.startActivity(intent)
-                            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Crossfade(targetState = isInEditMode, label = "ViewEditCrossfade") { isEditing ->
+                    if (isEditing) {
+                        EditContactForm(
+                            name = contactName,
+                            onNameChange = { contactName = it },
+                            relationship = relationship,
+                            onRelationshipChange = { relationship = it },
+                            phone = phoneNumber,
+                            onPhoneChange = { phoneNumber = it }
                         )
+                    } else {
+                        contactFromDb?.let {
+                            AnimatedVisibility(visible = true, enter = slideInHorizontally())
+                            { ViewContactCard(
+                                name = it.name,
+                                relationship = it.relationship,
+                                phone = it.phone,
+                                onCall = {
+                                    val intent = Intent(Intent.ACTION_DIAL, "tel:${it.phone}".toUri())
+                                    context.startActivity(intent)
+                                },
+                                onMessage = {
+                                    val intent = Intent(Intent.ACTION_SENDTO, "smsto:${it.phone}".toUri())
+                                    context.startActivity(intent)
+                                }
+                            ) }
+                        }
                     }
                 }
-            }
-            if (!isInEditMode && contactFromDb == null) {
-                Text("No hay un contacto de emergencia guardado. Presiona el botón de editar para añadir uno.")
+                if (!isInEditMode && contactFromDb == null) {
+                    Text("No hay un contacto de emergencia guardado. Presiona el botón de editar para añadir uno.")
+                }
             }
         }
     }
@@ -177,7 +191,7 @@ private fun ViewContactCard(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 ActionButton(text = "Llamar", icon = Icons.Default.Call, onClick = onCall, modifier = Modifier.weight(1f))
-                ActionButton(text = "Mensaje", icon = Icons.Default.Message, onClick = onMessage, modifier = Modifier.weight(1f))
+                ActionButton(text = "Mensaje", icon = Icons.AutoMirrored.Filled.Message, onClick = onMessage, modifier = Modifier.weight(1f))
             }
         }
     }
