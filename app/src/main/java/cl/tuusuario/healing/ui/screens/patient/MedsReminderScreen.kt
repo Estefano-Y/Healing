@@ -1,5 +1,10 @@
 package cl.tuusuario.healing.ui.screens.patient
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -62,7 +67,7 @@ fun MedsReminderScreen(onBack: () -> Unit) {
             emergencyContactDao = db.emergencyContactDao(),
             medsReminderDao = db.medsReminderDao(),
             professionalDao = db.professionalDao(),
-            userDao = db.userDao() // <-- Se añade el userDao que faltaba
+            userDao = db.userDao()
         )
     }
 
@@ -70,6 +75,9 @@ fun MedsReminderScreen(onBack: () -> Unit) {
     val allMedications by viewModel.remindersState.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { visible = true }
 
     val groupedMeds = allMedications.groupBy { getTimePeriod(it.time) }
 
@@ -85,43 +93,52 @@ fun MedsReminderScreen(onBack: () -> Unit) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            AnimatedVisibility(visible = visible, enter = scaleIn(animationSpec = tween(500)))
+            { FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir Recordatorio")
-            }
+            } }
         }
     ) { paddingValues ->
-        if (allMedications.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No hay recordatorios. Presiona '+' para añadir uno.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
-            ) {
-                TimePeriod.entries.forEach { period ->
-                    groupedMeds[period]?.let { medsInPeriod ->
-                        stickyHeader {
-                            Surface(modifier = Modifier.fillParentMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-                                Text(
-                                    text = period.displayName,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
+        AnimatedVisibility(visible = visible, enter = fadeIn(animationSpec = tween(500)))
+        {
+            if (allMedications.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No hay recordatorios. Presiona '+' para añadir uno.")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    TimePeriod.entries.forEach { period ->
+                        groupedMeds[period]?.let { medsInPeriod ->
+                            stickyHeader {
+                                Surface(modifier = Modifier.fillParentMaxWidth(), color = MaterialTheme.colorScheme.surface) {
+                                    Text(
+                                        text = period.displayName,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(vertical = 16.dp)
+                                    )
+                                }
                             }
-                        }
-                        items(medsInPeriod, key = { it.id }) { medication ->
-                            TimelineNode(
-                                medication = medication,
-                                onTakenChange = { viewModel.toggleIsTaken(medication) },
-                                onDelete = { viewModel.deleteReminder(medication.id) },
-                                drawConnectorLine = medication != medsInPeriod.last()
-                            )
+                            items(medsInPeriod, key = { it.id }) { medication ->
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = slideInHorizontally(animationSpec = tween(durationMillis = 500), initialOffsetX = { -it/2 })
+                                ){
+                                    TimelineNode(
+                                        medication = medication,
+                                        onTakenChange = { viewModel.toggleIsTaken(medication) },
+                                        onDelete = { viewModel.deleteReminder(medication.id) },
+                                        drawConnectorLine = medication != medsInPeriod.last()
+                                    )
+                                }
+                            }
                         }
                     }
                 }

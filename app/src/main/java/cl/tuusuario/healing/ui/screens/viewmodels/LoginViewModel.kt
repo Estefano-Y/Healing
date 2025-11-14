@@ -1,5 +1,6 @@
 package cl.tuusuario.healing.ui.screens.viewmodels
 
+import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -35,7 +36,11 @@ class LoginViewModel(private val repository: PatientDataRepository) : ViewModel(
     // --- ACCIONES DESDE LA UI ---
     fun onEmailChange(newEmail: String) {
         email = newEmail
-        emailError = if (!newEmail.contains("@")) "Email no válido" else null
+        emailError = if (!Patterns.EMAIL_ADDRESS.matcher(newEmail).matches()) {
+            "Formato de email incorrecto"
+        } else {
+            null
+        }
         loginError = null // Limpia el error al escribir
     }
 
@@ -75,10 +80,22 @@ class LoginViewModel(private val repository: PatientDataRepository) : ViewModel(
         }
     }
 
+    fun onAdminLogin(password: String) {
+        viewModelScope.launch {
+            if (password == "admin123") { // Contraseña de administrador hardcoreada
+                _navigationEvent.send(NavigationEvent.NavigateToAdminHome)
+            } else {
+                loginError = "Contraseña de administrador incorrecta"
+            }
+        }
+    }
+
     // --- CLASE PARA EVENTOS DE NAVEGACIÓN ---
     sealed class NavigationEvent {
         data class NavigateToPatientHome(val userName: String) : NavigationEvent()
         object NavigateToProfessionalHome : NavigationEvent()
         object NavigateToRegister : NavigationEvent()
+        object NavigateToAdminHome : NavigationEvent()
+
     }
 }
