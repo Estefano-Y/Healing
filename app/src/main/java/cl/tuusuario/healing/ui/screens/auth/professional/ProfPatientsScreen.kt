@@ -204,17 +204,24 @@ private fun AddPatientDialog(
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre completo") }, singleLine = true)
                 OutlinedTextField(
                     value = age, onValueChange = { age = it }, label = { Text("Edad") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
                 )
                 OutlinedTextField(value = diagnosis, onValueChange = { diagnosis = it }, label = { Text("Diagnóstico Principal") }, singleLine = true)
             }
         },
         confirmButton = {
             Button(
-                onClick = { if (isFormValid) onConfirm(name, age.toInt(), diagnosis) },
+                onClick = { onConfirm(name, age.toInt(), diagnosis) },
                 enabled = isFormValid
-            ) { Text("Guardar") }
+            ) {
+                Text("Añadir")
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
     )
 }

@@ -1,11 +1,16 @@
-package cl.tuusuario.healing.ui.screens.professional
+package cl.tuusuario.healing.ui.screens.auth.professional
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -13,16 +18,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import cl.tuusuario.healing.ui.navigation.Routes
+import kotlinx.coroutines.delay
 
-// Esta pantalla ahora recibe el NavController para poder navegar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfessionalHomeScreen(nav: NavController) {
 
-    // Datos de ejemplo que vendrían de un ViewModel
     val criticalAlerts = 2
     val pendingMessages = 5
     val nextAppointment = "Hoy a las 15:00 con Juan Pérez"
+
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
 
     Scaffold(
         topBar = {
@@ -34,100 +41,117 @@ fun ProfessionalHomeScreen(nav: NavController) {
             )
         }
     ) { paddingValues ->
-        // Usamos LazyColumn para que la pantalla pueda crecer si añadimos más tarjetas
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Saludo y resumen rápido
-            item {
-                Text(
-                    "Bienvenido, Dr. Apellido", // Reemplazar con el nombre real
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Tarjeta de Alertas Críticas
-            if (criticalAlerts > 0) {
+        AnimatedVisibility(visible = visible, enter = fadeIn(tween(500))) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    HighlightCard(
-                        title = "$criticalAlerts Alertas Críticas",
-                        subtitle = "Pacientes que requieren atención inmediata.",
-                        icon = Icons.Default.Warning,
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        iconColor = MaterialTheme.colorScheme.error,
-                        onClick = {
-                            // Navegar a la lista de pacientes, quizás con un filtro de "críticos"
-                            nav.navigate(Routes.PROF_PATIENTS)
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = slideInVertically(animationSpec = tween(500)) { -it }
+                    ) {
+                        Text(
+                            "Bienvenido, Dr. Patrick Scrum",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                if (criticalAlerts > 0) {
+                    item {
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(tween(500, 200)) + slideInVertically(tween(500, 200))
+                        ) {
+                            HighlightCard(
+                                title = "$criticalAlerts Alertas Críticas",
+                                subtitle = "Pacientes que requieren atención inmediata.",
+                                icon = Icons.Default.Warning,
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                iconColor = MaterialTheme.colorScheme.error,
+                                onClick = { nav.navigate(Routes.PROF_PATIENTS) }
+                            )
                         }
-                    )
+                    }
                 }
-            }
 
-            // Tarjeta de Próxima Cita
-            item {
-                InfoCard(
-                    title = "Próxima Cita",
-                    subtitle = nextAppointment,
-                    icon = Icons.Default.CalendarToday,
-                    onClick = { nav.navigate(Routes.PROF_AGENDA) }
-                )
-            }
-
-            // Tarjeta de Mensajes Pendientes
-            if (pendingMessages > 0) {
                 item {
-                    InfoCard(
-                        title = "$pendingMessages Mensajes Nuevos",
-                        subtitle = "Pacientes esperando una respuesta.",
-                        icon = Icons.Default.MarkChatRead,
-                        onClick = { /* Navegar a una pantalla de mensajería general o al primer paciente con mensaje */ }
-                    )
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(500, 300)) + slideInVertically(tween(500, 300))
+                    ) {
+                        InfoCard(
+                            title = "Próxima Cita",
+                            subtitle = nextAppointment,
+                            icon = Icons.Default.CalendarToday,
+                            onClick = { nav.navigate(Routes.PROF_AGENDA) }
+                        )
+                    }
                 }
-            }
 
-            // Tarjetas de Acceso Rápido a las Herramientas
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Herramientas",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+                if (pendingMessages > 0) {
+                    item {
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(tween(500, 400)) + slideInVertically(tween(500, 400))
+                        ) {
+                            InfoCard(
+                                title = "$pendingMessages Mensajes Nuevos",
+                                subtitle = "Pacientes esperando una respuesta.",
+                                icon = Icons.Default.MarkChatRead,
+                                onClick = { /* Navegar a una pantalla de mensajería general o al primer paciente con mensaje */ }
+                            )
+                        }
+                    }
+                }
 
-            item {
-                ActionCard(
-                    title = "Ver todos los Pacientes",
-                    icon = Icons.Default.Groups,
-                    onClick = { nav.navigate(Routes.PROF_PATIENTS) }
-                )
-            }
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(500, 500)) + slideInVertically(tween(500, 500))
+                    ) {
+                        Text(
+                            "Herramientas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
 
-            item {
-                ActionCard(
-                    title = "Gestionar Agenda",
-                    icon = Icons.Default.Event,
-                    onClick = { nav.navigate(Routes.PROF_AGENDA) }
-                )
-            }
-
-            item {
-                ActionCard(
-                    title = "Registrar Atención",
-                    icon = Icons.Default.PostAdd,
-                    onClick = { nav.navigate(Routes.PROF_REGISTER) }
-                )
+                itemsIndexed(
+                    listOf(
+                        "Ver todos los Pacientes" to Icons.Default.Groups,
+                        "Gestionar Agenda" to Icons.Default.Event,
+                        "Registrar Atención" to Icons.Default.PostAdd
+                    )
+                ) { index, item ->
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(500, 600 + index * 100)) + slideInVertically(tween(500, 600 + index * 100))
+                    ) {
+                        ActionCard(
+                            title = item.first,
+                            icon = item.second,
+                            onClick = {
+                                when (item.first) {
+                                    "Ver todos los Pacientes" -> nav.navigate(Routes.PROF_PATIENTS)
+                                    "Gestionar Agenda" -> nav.navigate(Routes.PROF_AGENDA)
+                                    "Registrar Atención" -> nav.navigate(Routes.PROF_REGISTER)
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
-
-// ---- Componentes reutilizables para esta pantalla ----
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

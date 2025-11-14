@@ -1,5 +1,6 @@
 package cl.tuusuario.healing.ui.screens.viewmodels
 
+import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -50,12 +51,22 @@ class RegisterViewModel(private val repository: PatientDataRepository) : ViewMod
     // --- ACCIONES DESDE LA UI ---
     fun onNameChange(newName: String) {
         name = newName
-        nameError = if (newName.isBlank()) "El nombre no puede estar vacío" else null
+        if (newName.isBlank()) {
+            nameError = "El nombre no puede estar vacío."
+        } else if (!newName.all { it.isLetter() || it.isWhitespace() }) {
+            nameError = "El nombre solo puede contener letras y espacios."
+        } else {
+            nameError = null
+        }
     }
 
     fun onEmailChange(newEmail: String) {
         email = newEmail
-        emailError = if (!newEmail.contains("@")) "Email no válido" else null
+        emailError = if (!Patterns.EMAIL_ADDRESS.matcher(newEmail).matches()) {
+            "Formato de email incorrecto"
+        } else {
+            null
+        }
         registrationError = null // Limpiamos el error al cambiar el email
     }
 
