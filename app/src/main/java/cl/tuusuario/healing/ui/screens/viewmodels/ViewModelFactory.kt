@@ -33,6 +33,8 @@ class ViewModelFactory(
                 RegisterViewModel(repository) as T
             modelClass.isAssignableFrom(LoginViewModel::class.java) ->
                 LoginViewModel(repository) as T
+            modelClass.isAssignableFrom(AdminViewModel::class.java) ->
+                AdminViewModel(repository) as T
 
             // --- ¡NUEVO! Añadimos el PatientHomeViewModel a la factory ---
             modelClass.isAssignableFrom(PatientHomeViewModel::class.java) ->
