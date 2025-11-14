@@ -72,6 +72,8 @@ class PatientDataRepository(
         return userDao.getUserByEmail(email)
     }
 
+    fun getAllUsers(): Flow<List<UserEntity>> = userDao.getAllUsers()
+
     // --- Función para añadir datos de prueba fácilmente ---
     suspend fun addDummyProfessionalData() {
         val professionalId = "dr.house@example.com"

@@ -1,7 +1,20 @@
 package cl.tuusuario.healing.ui.screens.patient
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -43,25 +57,18 @@ fun PersonalDataScreen(
     val dataFromDb by viewModel.personalDataState.collectAsState()
 
     var isInEditMode by remember { mutableStateOf(false) }
-
-    var name by remember { mutableStateOf("") }
-    var birthDate by remember { mutableStateOf("") }
-    var bloodType by remember { mutableStateOf("") }
-    var allergies by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(dataFromDb) {
-        dataFromDb?.let {
-            name = it.name
-            birthDate = it.birthDate
-            bloodType = it.bloodType
-            allergies = it.allergies
-        } ?: run {
+        visible = true
+        if (dataFromDb == null) {
             isInEditMode = true
         }
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -71,68 +78,113 @@ fun PersonalDataScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                modifier = Modifier.alpha(if (scrollState.value > 100) 0.7f else 1.0f) // Parallax
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
                     if (isInEditMode) {
-                        viewModel.savePersonalData(name, birthDate, bloodType, allergies)
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Datos Guardados")
+                        if (viewModel.isFormValid) {
+                            viewModel.savePersonalData()
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Datos Guardados")
+                            }
+                             isInEditMode = false
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(viewModel.nameError ?: "Hay errores en el formulario")
+                            }
                         }
+                    } else {
+                        isInEditMode = true
                     }
-                    isInEditMode = !isInEditMode
                 }
             ) {
-                Crossfade(targetState = isInEditMode) {
+                Crossfade(targetState = isInEditMode, label = "FAB_Icon") {
                     if (it) Icon(Icons.Default.Done, "Guardar") else Icon(Icons.Default.Edit, "Editar")
                 }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(animationSpec = tween(durationMillis = 500)) + slideInHorizontally(initialOffsetX = { -it / 2 })
         ) {
-
-            Crossfade(targetState = isInEditMode, label = "DataFields") {
-                if(it) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        EditFields(name, {name=it}, birthDate, {birthDate=it}, bloodType, {bloodType=it}, allergies, {allergies=it})
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DisplayFields(dataFromDb?.name, dataFromDb?.birthDate, dataFromDb?.bloodType, dataFromDb?.allergies)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                Crossfade(targetState = isInEditMode, label = "DataFields") {
+                    if(it) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            EditFields(
+                                viewModel = viewModel,
+                                name = viewModel.name,
+                                onNameChange = { viewModel.onNameChange(it) },
+                                birthDate = viewModel.birthDate,
+                                onBirthChange = { viewModel.onBirthDateChange(it) },
+                                bloodType = viewModel.bloodType,
+                                onBloodChange = { viewModel.onBloodTypeChange(it) },
+                                allergies = viewModel.allergies,
+                                onAllergiesChange = { viewModel.onAllergiesChange(it) }
+                            )
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            DisplayFields(
+                                name = dataFromDb?.name,
+                                birthDate = dataFromDb?.birthDate,
+                                bloodType = dataFromDb?.bloodType,
+                                allergies = dataFromDb?.allergies
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.height(80.dp))
             }
-            Spacer(Modifier.height(80.dp))
         }
     }
 }
 
 @Composable
-private fun EditFields(name: String, onNameChange: (String) -> Unit, birthDate: String, onBirthChange: (String) -> Unit, blood: String, onBloodChange: (String) -> Unit, allergies: String, onAllergiesChange: (String) -> Unit) {
+private fun EditFields(
+    viewModel: PersonalDataViewModel,
+    name: String,
+    onNameChange: (String) -> Unit,
+    birthDate: String,
+    onBirthChange: (String) -> Unit,
+    bloodType: String,
+    onBloodChange: (String) -> Unit,
+    allergies: String,
+    onAllergiesChange: (String) -> Unit
+) {
     SectionTitle("Información Básica")
-    EditableDataField(label = "Nombre", value = name, onValueChange = onNameChange, leadingIcon = Icons.Default.Person)
+    EditableDataField(
+        label = "Nombre",
+        value = name,
+        onValueChange = onNameChange,
+        leadingIcon = Icons.Default.Person,
+        isError = viewModel.nameError != null,
+        errorMessage = viewModel.nameError
+    )
     EditableDataField(label = "Fecha Nacimiento", value = birthDate, onValueChange = onBirthChange, leadingIcon = Icons.Default.Cake)
-    EditableDataField(label = "Tipo de Sangre", value = blood, onValueChange = onBloodChange, leadingIcon = Icons.Default.Bloodtype)
+    EditableDataField(label = "Tipo de Sangre", value = bloodType, onValueChange = onBloodChange, leadingIcon = Icons.Default.Bloodtype)
     SectionTitle("Datos Médicos")
     EditableDataField(label = "Alergias", value = allergies, onValueChange = onAllergiesChange, leadingIcon = Icons.Default.MedicalInformation, singleLine = false)
 }
 
 @Composable
-private fun DisplayFields(name: String?, birthDate: String?, blood: String?, allergies: String?){
+private fun DisplayFields(name: String?, birthDate: String?, bloodType: String?, allergies: String?){
     SectionTitle("Información Básica")
     DisplayDataField(label = "Nombre", value = name, icon = Icons.Default.Person)
     DisplayDataField(label = "Fecha Nacimiento", value = birthDate, icon = Icons.Default.Cake)
-    DisplayDataField(label = "Tipo de Sangre", value = blood, icon = Icons.Default.Bloodtype)
+    DisplayDataField(label = "Tipo de Sangre", value = bloodType, icon = Icons.Default.Bloodtype)
     SectionTitle("Datos Médicos")
     DisplayDataField(label = "Alergias", value = allergies, icon = Icons.Default.MedicalInformation)
 }
@@ -140,19 +192,41 @@ private fun DisplayFields(name: String?, birthDate: String?, blood: String?, all
 
 @Composable
 private fun SectionTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+    AnimatedVisibility(visible = visible, enter = slideInHorizontally(animationSpec = tween(500)))
+    { Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)) }
 }
 
 @Composable
-private fun EditableDataField(label: String, value: String, onValueChange: (String) -> Unit, leadingIcon: ImageVector, singleLine: Boolean = true) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        leadingIcon = { Icon(leadingIcon, null) },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = singleLine
-    )
+private fun EditableDataField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    leadingIcon: ImageVector,
+    singleLine: Boolean = true,
+    isError: Boolean = false,
+    errorMessage: String? = null
+) {
+    Column {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            leadingIcon = { Icon(leadingIcon, null) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = singleLine,
+            isError = isError
+        )
+        errorMessage?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
+    }
 }
 
 @Composable

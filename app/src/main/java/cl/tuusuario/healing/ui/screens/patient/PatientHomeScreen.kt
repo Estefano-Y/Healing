@@ -1,23 +1,23 @@
 package cl.tuusuario.healing.ui.screens.patient
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +30,7 @@ import cl.tuusuario.healing.data.local.repository.PatientDataRepository
 import cl.tuusuario.healing.ui.navigation.Routes
 import cl.tuusuario.healing.ui.screens.viewmodels.PatientHomeViewModel
 import cl.tuusuario.healing.ui.screens.viewmodels.ViewModelFactory
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -58,7 +59,6 @@ fun PatientHomeScreen(nav: NavController, userName: String) {
     val dayFormatter = remember { DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("es", "ES")) }
     val today = LocalDate.now().format(dayFormatter).replaceFirstChar { it.uppercase() }
 
-    // --- ¡CORRECCIÓN! Se elimina la opción "Profesional" ---
     val actions = remember {
         listOf(
             ActionItem("Mi Agenda", Icons.Default.CalendarMonth, Routes.CALENDAR),
@@ -69,6 +69,15 @@ fun PatientHomeScreen(nav: NavController, userName: String) {
         )
     }
 
+    var headerVisible by remember { mutableStateOf(false) }
+    var contentVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        headerVisible = true
+        delay(200)
+        contentVisible = true
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -77,29 +86,45 @@ fun PatientHomeScreen(nav: NavController, userName: String) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Header(userName, today)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+            AnimatedVisibility(
+                visible = headerVisible,
+                enter = slideInVertically(animationSpec = tween(400)) { -it } + fadeIn(tween(400))
             ) {
-                NextTaskCard(nextUpcomingReminder?.let { "${it.medName} - ${it.time}" } ?: "No tienes más tareas por hoy")
+                Header(userName, today)
+            }
 
-                Text(
-                    "Tus Herramientas",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            AnimatedVisibility(
+                visible = contentVisible,
+                enter = slideInVertically(animationSpec = tween(500, delayMillis = 200)) { it / 2 } + fadeIn(tween(500, delayMillis = 200))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    items(actions) { action ->
-                        ActionCard(action.title, action.icon) { nav.navigate(action.route) }
+                    NextTaskCard(nextUpcomingReminder?.let { "${it.medName} - ${it.time}" } ?: "No tienes más tareas por hoy")
+
+                    Text(
+                        "Tus Herramientas",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        itemsIndexed(actions) { index, action ->
+                            AnimatedVisibility(
+                                visible = contentVisible,
+                                enter = fadeIn(animationSpec = tween(delayMillis = index * 100))
+                                        + slideInVertically(animationSpec = tween(delayMillis = index * 100)) { it / 2 }
+                            ) {
+                                ActionCard(action.title, action.icon) { nav.navigate(action.route) }
+                            }
+                        }
                     }
                 }
             }
