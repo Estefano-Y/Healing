@@ -8,14 +8,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import cl.tuusuario.healing.ui.screens.auth.AdminHomeScreen
+import cl.tuusuario.healing.ui.screens.auth.AdminUserListScreen
 import cl.tuusuario.healing.ui.screens.auth.LoginScreen
 import cl.tuusuario.healing.ui.screens.auth.RegisterScreen
 import cl.tuusuario.healing.ui.screens.auth.professional.PatientDetailScreen
 import cl.tuusuario.healing.ui.screens.auth.professional.ProfPatientsScreen
+import cl.tuusuario.healing.ui.screens.auth.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.patient.*
 import cl.tuusuario.healing.ui.screens.patient.notes.NotesScreen
 import cl.tuusuario.healing.ui.screens.professional.ProfAgendaScreen
-import cl.tuusuario.healing.ui.screens.professional.ProfessionalHomeScreen
 import cl.tuusuario.healing.ui.screens.professional.RegisterAttentionScreen
 
 
@@ -31,6 +33,8 @@ object Routes {
     const val PROF_AGENDA = "prof_agenda"
     const val PROF_PATIENTS = "prof_patients"
     const val PROF_REGISTER = "prof_register"
+    const val ADMIN_HOME = "admin_home"
+    const val ADMIN_USER_LIST = "admin_user_list"
 
     // Rutas dinámicas para detalles de paciente y home de paciente
     private const val PATIENT_DETAIL_ARG = "patientId"
@@ -72,12 +76,21 @@ fun AppNav(startDestination: String = Routes.LOGIN) {
             LoginScreen(
                 onLoginAsPatient = { userName -> nav.navigate(Routes.patientHomeRoute(userName)) },
                 onLoginAsProfessional = { nav.navigate(Routes.PROFESSIONAL_HOME) },
-                onGoToRegister = { nav.navigate(Routes.REGISTER) }
+                onGoToRegister = { nav.navigate(Routes.REGISTER) },
+                onLoginAsAdmin = { nav.navigate(Routes.ADMIN_HOME) }
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(onNavigateBack = { nav.popBackStack() })
+        }
+
+        composable(Routes.ADMIN_HOME) {
+            AdminHomeScreen(nav)
+        }
+
+        composable(Routes.ADMIN_USER_LIST) {
+            AdminUserListScreen(nav)
         }
 
         // --- NAVEGACIÓN DEL PACIENTE ---
