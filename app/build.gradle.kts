@@ -45,6 +45,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0-beta01")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     // Animaciones para la Navegación
     implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
@@ -69,9 +70,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     // Retrofit para llamadas HTTP
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // Conversor JSON → objetos Kotlin
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     // (Opcional) logs de red para depurar
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
