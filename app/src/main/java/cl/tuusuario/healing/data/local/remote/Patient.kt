@@ -5,5 +5,8 @@ data class Patient(
     val firstName: String,
     val lastName: String,
     val email: String? = null,
-    val phone: String? = null
+    val phone: String? = null,
+    val professional: String? = null,
+    val dateTimeIso: String? = null,
+    val notes: String? = null
 )
